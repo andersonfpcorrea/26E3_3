@@ -1,4 +1,4 @@
-"""Dataset download, image discovery and splitting shared by the notebooks."""
+"""Dataset download, image discovery, splitting and preprocessing shared by the notebooks."""
 
 from collections import Counter
 from hashlib import sha256
@@ -9,10 +9,13 @@ from PIL import Image
 from requests import get
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset
+from torchvision.transforms import CenterCrop, Compose, Normalize, Resize, ToTensor
 
 KAGGLE_DOWNLOAD_URL = "https://www.kaggle.com/api/v1/datasets/download/{slug}"
 IMAGE_SUFFIXES = {".bmp", ".jpg", ".jpeg", ".png"}
 MINIMUM_IMAGES_PER_CLASS = 7
+IMAGENET_MEAN = (0.485, 0.456, 0.406)
+IMAGENET_STD = (0.229, 0.224, 0.225)
 
 
 def download_kaggle_dataset(slug: str, destination: Path) -> Path:
@@ -39,9 +42,23 @@ def download_kaggle_dataset(slug: str, destination: Path) -> Path:
     return destination
 
 
+def has_image_name(path: Path) -> bool:
+    """Tells whether a path is named like a visible image file."""
+    return not path.name.startswith(".") and path.suffix.lower() in IMAGE_SUFFIXES
+
+
+def count_image_files(root: Path) -> int:
+    """Counts the visible files under root that are named like images.
+
+    Nothing is opened, so exact copies and files that cannot be decoded are
+    counted too. This is the size of a download before any cleaning.
+    """
+    return sum(1 for path in Path(root).rglob("*") if path.is_file() and has_image_name(path))
+
+
 def is_readable_image(path: Path) -> bool:
     """Tells whether a file is a visible image that Pillow can decode."""
-    if path.name.startswith(".") or path.suffix.lower() not in IMAGE_SUFFIXES:
+    if not has_image_name(path):
         return False
     try:
         with Image.open(path) as image:
@@ -123,3 +140,21 @@ class ImageListDataset(Dataset):
         """Loads one image as RGB and returns it transformed, with its label."""
         with Image.open(self.paths[index]) as image:
             return self.transform(image.convert("RGB")), self.labels[index]
+
+
+def imagenet_transform(resize_size: int = 232, crop_size: int = 224) -> Compose:
+    """Returns the evaluation preprocessing of a backbone pre-trained on ImageNet.
+
+    The short side is resized to ``resize_size``, a centre square of
+    ``crop_size`` is cut out and the channels are normalized with the ImageNet
+    mean and standard deviation. The defaults are the published preset of the
+    ResNet-50 ``IMAGENET1K_V2`` weights. Other weights may use other sizes.
+    """
+    return Compose(
+        [
+            Resize(resize_size),
+            CenterCrop(crop_size),
+            ToTensor(),
+            Normalize(IMAGENET_MEAN, IMAGENET_STD),
+        ]
+    )

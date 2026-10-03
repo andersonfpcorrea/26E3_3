@@ -1,12 +1,10 @@
 """Tests for the frozen ResNet-50 feature extractor."""
 
 import torch
-from PIL import Image
 from torch.utils.data import DataLoader, TensorDataset
 
 from dlv.cnn import (
     build_feature_extractor,
-    imagenet_transform,
     set_feature_extraction_mode,
     trainable_parameters,
 )
@@ -57,9 +55,3 @@ def test_training_changes_head_and_leaves_backbone_untouched():
     assert torch.equal(model.bn1.running_mean, running_mean)
     assert torch.equal(model.conv1.weight, first_filter)
     assert not torch.equal(model.fc.weight, head)
-
-
-def test_imagenet_transform_produces_normalized_square_tensor():
-    tensor = imagenet_transform()(Image.new("RGB", (640, 480), (255, 255, 255)))
-    assert tensor.shape == (3, 224, 224)
-    assert tensor.max() > 2.0

@@ -2,10 +2,6 @@
 
 from torch import nn
 from torchvision.models import ResNet50_Weights, resnet50
-from torchvision.transforms import CenterCrop, Compose, Normalize, Resize, ToTensor
-
-IMAGENET_MEAN = (0.485, 0.456, 0.406)
-IMAGENET_STD = (0.229, 0.224, 0.225)
 
 
 def build_feature_extractor(num_classes: int, pretrained: bool = True) -> nn.Module:
@@ -37,15 +33,3 @@ def set_feature_extraction_mode(model: nn.Module) -> None:
 def trainable_parameters(model: nn.Module) -> list:
     """Returns the parameters that receive gradients."""
     return [parameter for parameter in model.parameters() if parameter.requires_grad]
-
-
-def imagenet_transform(image_size: int = 224) -> Compose:
-    """Returns the preprocessing used when the backbone was pre-trained."""
-    return Compose(
-        [
-            Resize(232),
-            CenterCrop(image_size),
-            ToTensor(),
-            Normalize(IMAGENET_MEAN, IMAGENET_STD),
-        ]
-    )
