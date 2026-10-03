@@ -40,6 +40,17 @@ def test_list_image_folder_leaves_out_exact_copies(tmp_path):
     assert len(set(contents)) == len(contents)
 
 
+def test_list_image_folder_drops_images_shared_by_two_classes(tmp_path):
+    make_image_tree(tmp_path)
+    original = tmp_path / "data" / "bike" / "bike_3.bmp"
+    copy = tmp_path / "data" / "car" / "shared.bmp"
+    copy.write_bytes(original.read_bytes())
+    paths, labels, _ = list_image_folder(tmp_path)
+    assert original not in paths
+    assert copy not in paths
+    assert Counter(labels) == {0: 9, 1: 10}
+
+
 class FakeResponse:
     """Stands in for a streamed HTTP response carrying a zip archive."""
 

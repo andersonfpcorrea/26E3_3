@@ -60,17 +60,17 @@ def list_image_folder(root: Path) -> tuple[list[Path], list[int], list[str]]:
     """Finds every readable image under root and labels it by its parent folder.
 
     Returns the image paths, one integer label per path, and the class names
-    in the order used by the labels. Unreadable files are left out, and so are
-    exact copies of a file already kept (the first path in sorted order wins).
+    in the order used by the labels. Unreadable files are left out. Exact
+    copies within one class keep only the first path in sorted order. Files
+    with identical content under two or more classes have an ambiguous label,
+    so all of them are left out.
     """
-    readable = sorted(path for path in Path(root).rglob("*") if path.is_file() and is_readable_image(path))
-    seen = set()
-    paths = []
-    for path in readable:
-        digest = file_digest(path)
-        if digest not in seen:
-            seen.add(digest)
-            paths.append(path)
+    groups = {}
+    for path in sorted(path for path in Path(root).rglob("*") if path.is_file() and is_readable_image(path)):
+        groups.setdefault(file_digest(path), []).append(path)
+    paths = sorted(
+        group[0] for group in groups.values() if len({path.parent.name for path in group}) == 1
+    )
     class_names = sorted({path.parent.name for path in paths})
     index = {name: position for position, name in enumerate(class_names)}
     labels = [index[path.parent.name] for path in paths]
