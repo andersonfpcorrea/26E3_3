@@ -10,6 +10,7 @@ from nbformat.v4 import new_code_cell, new_notebook, new_output
 
 import colab_run
 from colab_run import collect_outputs, find_errors, run_on_colab
+from dlv.run import save_run, start_run
 
 
 def write_notebook(path, outputs):
@@ -40,6 +41,21 @@ def test_collect_outputs_places_metrics_and_figures(tmp_path):
     figures = tmp_path / "figures"
     collect_outputs(archive, "a3", results, figures)
     assert json.loads((results / "a3.json").read_text()) == {"accuracy": 0.5}
+    assert (figures / "a3_history.png").read_bytes() == b"png-bytes"
+
+
+def test_collect_outputs_reads_an_archive_made_by_save_run(tmp_path, monkeypatch):
+    """The archive a notebook saves is the archive the runner knows how to unpack."""
+    monkeypatch.chdir(tmp_path)
+    run = start_run("a3")
+    (run.figures_dir / "history.png").write_bytes(b"png-bytes")
+    archive = save_run(run, {"accuracy": 0.5})
+    results = tmp_path / "results"
+    figures = tmp_path / "figures"
+    assert collect_outputs(archive, "a3", results, figures) is True
+    saved = json.loads((results / "a3.json").read_text(encoding="utf-8"))
+    assert saved["accuracy"] == 0.5
+    assert "peak_ram_mb" in saved
     assert (figures / "a3_history.png").read_bytes() == b"png-bytes"
 
 

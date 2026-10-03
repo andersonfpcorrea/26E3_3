@@ -1,4 +1,5 @@
-peak_memory = torch.cuda.max_memory_allocated() / 1e6 if DEVICE.type == "cuda" else 0.0
+from dlv.run import save_run
+
 metrics = {
     "class_names": class_names,
     "class_counts": class_counts,
@@ -19,10 +20,10 @@ metrics = {
     "accuracy": report["accuracy"],
     "per_class_accuracy": dict(zip(class_names, report["per_class_accuracy"])),
     "confusion": report["confusion"],
-    "runtime_seconds": round(time.time() - STARTED_AT, 1),
-    "peak_gpu_memory_mb": round(peak_memory, 1),
 }
-(OUTPUT_DIR / "metrics.json").write_text(json.dumps(metrics, indent=2))
-print(make_archive("outputs_a3", "zip", OUTPUT_DIR))
-print("tempo total (s):", metrics["runtime_seconds"])
-print("pico de memória de GPU (MB):", metrics["peak_gpu_memory_mb"])
+archive = save_run(run, metrics)
+saved = json.loads((run.output_dir / "metrics.json").read_text(encoding="utf-8"))
+print("arquivo de saída:", archive)
+print("tempo total (s):", saved["runtime_seconds"])
+print("pico de memória de GPU (MB):", saved["peak_gpu_memory_mb"])
+print("pico de memória RAM (MB):", saved["peak_ram_mb"])

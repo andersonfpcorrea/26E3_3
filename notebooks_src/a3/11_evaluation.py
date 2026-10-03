@@ -6,6 +6,6 @@ print(f"acurácia global: {report['accuracy']:.4f}")
 for name, value in zip(class_names, report["per_class_accuracy"]):
     print(f"{name}: {value:.4f}")
 
-history_figure = plot_history(history, FIGURES_DIR / "history.png")
-confusion_figure = plot_confusion(report["confusion"], class_names, FIGURES_DIR / "confusion.png")
-per_class_figure = plot_per_class_accuracy(report["per_class_accuracy"], class_names, FIGURES_DIR / "per_class.png")
+history_figure = plot_history(history, run.figures_dir / "history.png")
+confusion_figure = plot_confusion(report["confusion"], class_names, run.figures_dir / "confusion.png")
+per_class_figure = plot_per_class_accuracy(report["per_class_accuracy"], class_names, run.figures_dir / "per_class.png")
