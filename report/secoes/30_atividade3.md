@@ -47,8 +47,8 @@
 
 ### Por que ResNet-50
 
-- Cabe com folga na T4. O pico de memória de GPU foi de 465,8 MB, cerca de 3% dos 15 GB da placa.
-- É rápida o bastante para o Colab. O notebook inteiro rodou em 134,4 segundos, contando download, 10 épocas e avaliação.
+- Cabe com folga na T4. O pico de memória alocada pelo PyTorch na GPU foi de 465,8 MB, cerca de 3% dos 15,6 GB da placa.
+- É rápida o bastante para o Colab. O notebook inteiro rodou em 108,2 segundos, contando download, 10 épocas e avaliação.
 - A saída do backbone tem 2.048 features por imagem. Para separar 7 classes, a camada nova precisa de 2.048 x 7 pesos mais 7 vieses: 14.343 parâmetros.
 - A ImageNet já contém fotos muito parecidas com as deste dataset: várias raças de cães e de gatos, tipos de carro, bicicletas, cavalos e flores. Pessoas aparecem em muitas fotos da ImageNet, embora ela não tenha uma classe "pessoa".
 - Com 7 classes de objetos do dia a dia, um modelo maior não teria erro de teste para corrigir. A validação errou 2 imagens em 265.
@@ -59,7 +59,7 @@
 ### Por que feature extraction
 
 - O dataset é pequeno: 1.234 imagens de treino.
-- O domínio é o mesmo da ImageNet: fotos comuns de animais, veículos, flores e pessoas.
+- O domínio é próximo do da ImageNet: fotos comuns de animais, veículos, flores e pessoas.
 - A rede tem 23.522.375 parâmetros. Treinar todos com 1.234 imagens daria cerca de 19 mil parâmetros por imagem, com risco alto de overfitting.
 - Com o backbone congelado, só 14.343 parâmetros treinam: 0,06% do total.
 - O treino fica barato. O backbone só faz a passagem direta e não guarda gradientes, o que explica o pico de memória baixo.
@@ -168,10 +168,10 @@
 ### Color augmentation
 
 - **Brilho e contraste: ajudam bike e cars.** São fotos de rua com sol, sombra e algumas cenas noturnas com flash. A variação de luz já existe nos dados, e a augmentation cobre os casos intermediários.
-- **Mudança de matiz (hue): livre para bike, cars e flowers.** Bicicletas e carros têm pintura de qualquer cor. As flores do dataset são vermelhas, rosas, roxas, amarelas, brancas e laranja.
+- **Mudança de matiz (hue): livre para bike, cars e flowers.** Bicicletas e carros têm pintura de qualquer cor. As flores do dataset são vermelhas, cor-de-rosa, roxas, amarelas, brancas e laranja.
 - **Mudança de matiz distorce cats, dogs e horses.** A pelagem fica entre branco, preto, marrom, cinza e laranja. Um cavalo verde ou um gato azul não existe. Para essas classes, a mudança de matiz deve ser pequena.
-- **Tons de cinza com probabilidade baixa: ajuda horses e human.** Só essas duas classes têm imagens em preto e branco, e são poucas. Em human há também fotos antigas em sépia. Sem augmentation, o modelo pode aprender que "foto sem cor" quer dizer uma dessas duas classes. Aplicar tons de cinza às vezes em todas as classes quebra esse atalho.
-- **Tons de cinza prejudica flowers.** A cor forte da pétala contra o fundo verde é a pista mais clara da classe. Sem cor, sobra só a forma. Por isso a probabilidade deve ser baixa, perto de 10%.
+- **Tons de cinza com probabilidade baixa: ajuda horses e human.** Só essas duas classes têm imagens em preto e branco, e são poucas. Em human há também pelo menos uma foto antiga em sépia. Sem augmentation, o modelo pode aprender que "foto sem cor" quer dizer uma dessas duas classes. Aplicar tons de cinza às vezes em todas as classes quebra esse atalho.
+- **Tons de cinza prejudica flowers.** A cor forte da pétala é a pista mais clara da classe. Sem cor, sobra só a forma. Por isso a probabilidade deve ser baixa, perto de 10%.
 
 ### Scale variation
 
@@ -209,5 +209,5 @@
 - Tamanho: pequeno. São 1.764 imagens, 1.234 no treino.
 - Domínio: próximo. São fotos comuns de objetos que a ImageNet já cobre.
 - Célula da tabela: dataset pequeno e domínio próximo. A escolha é feature extraction.
-- O resultado confirma a escolha: com 14.343 parâmetros treinados, a validação chegou a 99,25% e o teste a 100%.
+- O resultado é coerente com a escolha: com 14.343 parâmetros treinados, a validação chegou a 99,25% e o teste a 100%.
 - Fine-tuning teria pouco a ganhar aqui. Sobram 2 erros na validação e nenhum no teste. Em troca, colocaria 23.522.375 parâmetros para treinar com 1.234 imagens.
