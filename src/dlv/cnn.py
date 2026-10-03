@@ -43,7 +43,7 @@ def imagenet_transform(image_size: int = 224) -> Compose:
     """Returns the preprocessing used when the backbone was pre-trained."""
     return Compose(
         [
-            Resize(256),
+            Resize(232),
             CenterCrop(image_size),
             ToTensor(),
             Normalize(IMAGENET_MEAN, IMAGENET_STD),
