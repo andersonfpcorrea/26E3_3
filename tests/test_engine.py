@@ -26,6 +26,7 @@ class AlwaysFirstClass(nn.Module):
 
 
 def test_fit_reduces_loss_and_records_every_epoch():
+    """Training lowers the loss and records four series with one value per epoch."""
     torch.manual_seed(0)
     model = nn.Linear(2, 2)
     optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
@@ -38,6 +39,7 @@ def test_fit_reduces_loss_and_records_every_epoch():
 
 
 def test_fit_calls_train_mode_setter_each_epoch():
+    """The train mode setter is called once per epoch with the model."""
     calls = []
     model = nn.Linear(2, 2)
     optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
@@ -55,6 +57,7 @@ def test_fit_calls_train_mode_setter_each_epoch():
 
 
 def test_run_epoch_without_optimizer_leaves_weights_untouched():
+    """A pass without an optimizer does not update the weights."""
     model = nn.Linear(2, 2)
     before = model.weight.clone()
     run_epoch(model, separable_loader(), torch.device("cpu"))
@@ -62,11 +65,13 @@ def test_run_epoch_without_optimizer_leaves_weights_untouched():
 
 
 def test_run_epoch_on_empty_loader_returns_zeros():
+    """A loader with no batches gives zero loss and zero accuracy."""
     empty = DataLoader(TensorDataset(torch.empty(0, 2), torch.empty(0, dtype=torch.long)))
     assert run_epoch(nn.Linear(2, 2), empty, torch.device("cpu")) == (0.0, 0.0)
 
 
 def test_evaluate_reports_per_class_accuracy_and_confusion():
+    """A model that always answers class zero gets the expected accuracy and matrix."""
     loader = separable_loader()
     report = evaluate(AlwaysFirstClass(), loader, torch.device("cpu"), num_classes=2)
     assert report["accuracy"] == 0.5

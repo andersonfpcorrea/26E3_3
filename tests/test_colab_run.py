@@ -20,6 +20,7 @@ def write_notebook(path, outputs):
 
 
 def test_find_errors_reports_failed_cells(tmp_path):
+    """An error output is reported with its cell number, name and message."""
     path = tmp_path / "failed.ipynb"
     error = new_output("error", ename="RuntimeError", evalue="boom", traceback=[])
     write_notebook(path, [error])
@@ -27,12 +28,14 @@ def test_find_errors_reports_failed_cells(tmp_path):
 
 
 def test_find_errors_is_empty_for_clean_notebook(tmp_path):
+    """A notebook without error outputs yields no lines."""
     path = tmp_path / "clean.ipynb"
     write_notebook(path, [new_output("stream", name="stdout", text="ok")])
     assert find_errors(path) == []
 
 
 def test_collect_outputs_places_metrics_and_figures(tmp_path):
+    """Metrics land in the results folder and figures get the activity prefix."""
     archive = tmp_path / "outputs.zip"
     with ZipFile(archive, "w") as bundle:
         bundle.writestr("metrics.json", json.dumps({"accuracy": 0.5}))
@@ -69,10 +72,12 @@ def prepare_build(tmp_path, monkeypatch):
 
 
 def test_session_is_stopped_when_execution_fails(tmp_path, monkeypatch):
+    """The session is stopped last even when the execution command fails."""
     prepare_build(tmp_path, monkeypatch)
     commands = []
 
     def execute(command, **kwargs):
+        """Records each command and fails the notebook execution."""
         commands.append(command[:2])
         if command[1] == "exec":
             raise CalledProcessError(1, command)
@@ -82,10 +87,12 @@ def test_session_is_stopped_when_execution_fails(tmp_path, monkeypatch):
 
 
 def test_run_fails_when_a_cell_raised(tmp_path, monkeypatch):
+    """A cell error fails the run, skips the download and stops the session."""
     prepare_build(tmp_path, monkeypatch)
     commands = []
 
     def execute(command, **kwargs):
+        """Records each command and writes an executed notebook with an error."""
         commands.append(command[:2])
         if command[1] == "exec":
             error = new_output("error", ename="ValueError", evalue="bad", traceback=[])
@@ -97,10 +104,12 @@ def test_run_fails_when_a_cell_raised(tmp_path, monkeypatch):
 
 
 def test_run_succeeds_and_collects_outputs(tmp_path, monkeypatch):
+    """A clean run collects metrics, figures and the executed notebook."""
     prepare_build(tmp_path, monkeypatch)
     commands = []
 
     def execute(command, **kwargs):
+        """Writes a clean executed notebook and a complete archive."""
         commands.append(command)
         if command[1] == "exec":
             output_notebook = kwargs["cwd"] / "A3_cnn_kaggle_output.ipynb"
@@ -121,10 +130,12 @@ def test_run_succeeds_and_collects_outputs(tmp_path, monkeypatch):
 
 
 def test_run_fails_with_missing_metrics(tmp_path, monkeypatch):
+    """An archive without metrics fails the run and delivers no notebook."""
     prepare_build(tmp_path, monkeypatch)
     commands = []
 
     def execute(command, **kwargs):
+        """Writes a clean executed notebook and an archive without metrics."""
         commands.append(command[:2])
         if command[1] == "exec":
             output_notebook = kwargs["cwd"] / "A3_cnn_kaggle_output.ipynb"
@@ -140,19 +151,23 @@ def test_run_fails_with_missing_metrics(tmp_path, monkeypatch):
 
 
 def test_session_is_stopped_safely_when_colab_missing(tmp_path, monkeypatch):
+    """A missing colab program fails the run without raising."""
     prepare_build(tmp_path, monkeypatch)
 
     def execute(command, **kwargs):
+        """Behaves as if the colab program were not installed."""
         raise FileNotFoundError("colab not found")
 
     assert run_on_colab("a3", execute=execute) == 1
 
 
 def test_exec_uses_a_long_per_cell_timeout(tmp_path, monkeypatch):
+    """The execution command asks for a 1800 second timeout."""
     prepare_build(tmp_path, monkeypatch)
     commands = []
 
     def execute(command, **kwargs):
+        """Records each command and fails the notebook execution."""
         commands.append(command)
         if command[1] == "exec":
             raise CalledProcessError(1, command)

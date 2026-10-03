@@ -12,6 +12,7 @@ from dlv.engine import fit
 
 
 def test_only_the_new_head_is_trainable():
+    """Only the weight and bias of the new head receive gradients."""
     model = build_feature_extractor(num_classes=5, pretrained=False)
     names = {name for name, parameter in model.named_parameters() if parameter.requires_grad}
     assert names == {"fc.weight", "fc.bias"}
@@ -19,6 +20,7 @@ def test_only_the_new_head_is_trainable():
 
 
 def test_head_matches_number_of_classes():
+    """The head has one output per class and the model returns that shape."""
     model = build_feature_extractor(num_classes=5, pretrained=False)
     model.eval()
     assert model.fc.out_features == 5
@@ -26,6 +28,7 @@ def test_head_matches_number_of_classes():
 
 
 def test_feature_extraction_mode_keeps_backbone_in_eval():
+    """The backbone stays in evaluation mode while the head trains."""
     model = build_feature_extractor(num_classes=5, pretrained=False)
     set_feature_extraction_mode(model)
     assert model.layer1.training is False
@@ -34,6 +37,7 @@ def test_feature_extraction_mode_keeps_backbone_in_eval():
 
 
 def test_training_changes_head_and_leaves_backbone_untouched():
+    """One epoch changes the head and leaves backbone weights and statistics as they were."""
     torch.manual_seed(0)
     model = build_feature_extractor(num_classes=2, pretrained=False)
     images = torch.randn(4, 3, 64, 64)

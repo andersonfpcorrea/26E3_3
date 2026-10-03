@@ -35,6 +35,7 @@ def make_image_tree(root, classes=("bike", "car"), per_class=10):
 
 
 def test_list_image_folder_leaves_out_exact_copies(tmp_path):
+    """A download holding the dataset twice yields each image once."""
     make_image_tree(tmp_path)
     copytree(tmp_path / "data", tmp_path / "data" / "data")
     paths, labels, _ = list_image_folder(tmp_path)
@@ -45,6 +46,7 @@ def test_list_image_folder_leaves_out_exact_copies(tmp_path):
 
 
 def test_list_image_folder_drops_images_shared_by_two_classes(tmp_path):
+    """An image whose copy sits in another class is dropped from both."""
     make_image_tree(tmp_path)
     original = tmp_path / "data" / "bike" / "bike_3.bmp"
     copy = tmp_path / "data" / "car" / "shared.bmp"
@@ -59,18 +61,23 @@ class FakeResponse:
     """Stands in for a streamed HTTP response carrying a zip archive."""
 
     def __init__(self, payload):
+        """Stores the bytes the response will serve."""
         self.payload = payload
 
     def __enter__(self):
+        """Enters the context and returns the response itself."""
         return self
 
     def __exit__(self, *details):
+        """Leaves the context without swallowing errors."""
         return False
 
     def raise_for_status(self):
+        """Reports a successful status."""
         return None
 
     def iter_content(self, chunk_size):
+        """Serves the whole payload as one chunk."""
         yield self.payload
 
 
@@ -85,6 +92,7 @@ def zip_payload():
 
 
 def test_download_extracts_archive(tmp_path, monkeypatch):
+    """The archive is extracted into the destination and then deleted."""
     monkeypatch.setattr(data, "get", lambda *args, **kwargs: FakeResponse(zip_payload()))
     destination = download_kaggle_dataset("owner/name", tmp_path / "set")
     assert (destination / "data" / "bike" / "one.png").exists()
@@ -92,10 +100,12 @@ def test_download_extracts_archive(tmp_path, monkeypatch):
 
 
 def test_download_is_skipped_when_already_complete(tmp_path, monkeypatch):
+    """A finished download is not fetched again."""
     monkeypatch.setattr(data, "get", lambda *args, **kwargs: FakeResponse(zip_payload()))
     download_kaggle_dataset("owner/name", tmp_path / "set")
 
     def fail(*args, **kwargs):
+        """Fails the test if a second download is attempted."""
         raise AssertionError("downloaded twice")
 
     monkeypatch.setattr(data, "get", fail)
@@ -105,16 +115,21 @@ def test_download_is_skipped_when_already_complete(tmp_path, monkeypatch):
 def test_download_propagates_http_error(tmp_path, monkeypatch):
     """Download failure does not create completion marker."""
     class FailingResponse:
+        """Stands in for a response with an HTTP error status."""
         def __enter__(self):
+            """Enters the context and returns the response itself."""
             return self
 
         def __exit__(self, *details):
+            """Leaves the context without swallowing errors."""
             return False
 
         def raise_for_status(self):
+            """Raises the HTTP error of a missing dataset."""
             raise HTTPError("404 Not Found")
 
         def iter_content(self, chunk_size):
+            """Serves one empty chunk."""
             yield b""
 
     monkeypatch.setattr(data, "get", lambda *args, **kwargs: FailingResponse())
@@ -132,6 +147,7 @@ def test_download_propagates_bad_zip_error(tmp_path, monkeypatch):
 
 
 def test_list_image_folder_labels_by_parent_folder(tmp_path):
+    """Each image is labelled with the name of its parent folder."""
     make_image_tree(tmp_path)
     paths, labels, class_names = list_image_folder(tmp_path)
     assert class_names == ["bike", "car"]
@@ -141,6 +157,7 @@ def test_list_image_folder_labels_by_parent_folder(tmp_path):
 
 
 def test_list_image_folder_skips_unreadable_and_non_image_files(tmp_path):
+    """Broken images, text files and hidden files are left out."""
     make_image_tree(tmp_path)
     (tmp_path / "data" / "bike" / "broken.jpg").write_bytes(b"not an image")
     (tmp_path / "data" / "bike" / "notes.txt").write_text("hello")
@@ -164,6 +181,7 @@ def test_list_image_folder_skips_truncated_images(tmp_path):
 
 
 def test_stratified_split_keeps_proportions_and_is_disjoint():
+    """The three parts cover every index once and keep the class shares."""
     labels = [0] * 100 + [1] * 40
     train, val, test = stratified_split(labels)
     assert sorted(train + val + test) == list(range(140))
@@ -173,16 +191,19 @@ def test_stratified_split_keeps_proportions_and_is_disjoint():
 
 
 def test_stratified_split_is_deterministic():
+    """The same seed gives the same split."""
     labels = [0] * 50 + [1] * 50
     assert stratified_split(labels, seed=7) == stratified_split(labels, seed=7)
 
 
 def test_stratified_split_names_the_class_that_is_too_small():
+    """A class too small to split is named in the error."""
     with pytest.raises(ValueError, match="class 1 has 3 images"):
         stratified_split([0] * 50 + [1] * 3)
 
 
 def test_image_list_dataset_returns_tensor_and_label(tmp_path):
+    """The dataset serves a float tensor and the matching label."""
     make_image_tree(tmp_path)
     paths, labels, _ = list_image_folder(tmp_path)
     dataset = ImageListDataset(paths, labels, ToTensor())
