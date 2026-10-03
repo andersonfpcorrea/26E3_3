@@ -7,9 +7,9 @@
 **Requisitos de execução**
 
 - Ambiente: Google Colab com GPU T4
-- Memória de GPU: menos de 4 GB
+- Memória de GPU: cerca de 0,5 GB (medido na T4)
 - Memória RAM: menos de 4 GB
 - Disco: 2 GB livres
-- Tempo estimado: menos de 15 minutos
+- Tempo estimado: cerca de 5 minutos (medido na T4)
 
 **Como executar:** menu *Ambiente de execução*, *Executar tudo*. O notebook baixa os dados sozinho e não precisa de login.

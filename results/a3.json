@@ -22,6 +22,8 @@
     "validation": 265,
     "test": 265
   },
+  "files_found": 3606,
+  "duplicates_removed": 1842,
   "hyperparameters": {
     "backbone": "resnet50 IMAGENET1K_V2",
     "batch_size": 32,
@@ -157,6 +159,6 @@
       27
     ]
   ],
-  "runtime_seconds": 170.1,
+  "runtime_seconds": 134.4,
   "peak_gpu_memory_mb": 465.8
 }
