@@ -2,11 +2,12 @@
 
 from collections import Counter
 from io import BytesIO
-from zipfile import ZipFile
+from zipfile import ZipFile, BadZipFile
 
 import pytest
 import torch
 from PIL import Image
+from requests import HTTPError
 from torchvision.transforms import ToTensor
 
 from dlv import data
@@ -75,6 +76,35 @@ def test_download_is_skipped_when_already_complete(tmp_path, monkeypatch):
     assert download_kaggle_dataset("owner/name", tmp_path / "set") == tmp_path / "set"
 
 
+def test_download_propagates_http_error(tmp_path, monkeypatch):
+    """Download failure does not create completion marker."""
+    class FailingResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *details):
+            return False
+
+        def raise_for_status(self):
+            raise HTTPError("404 Not Found")
+
+        def iter_content(self, chunk_size):
+            yield b""
+
+    monkeypatch.setattr(data, "get", lambda *args, **kwargs: FailingResponse())
+    with pytest.raises(HTTPError):
+        download_kaggle_dataset("owner/name", tmp_path / "set")
+    assert not (tmp_path / "set" / ".complete").exists()
+
+
+def test_download_propagates_bad_zip_error(tmp_path, monkeypatch):
+    """Invalid zip payload does not create completion marker."""
+    monkeypatch.setattr(data, "get", lambda *args, **kwargs: FakeResponse(b"<html>not a zip</html>"))
+    with pytest.raises(BadZipFile):
+        download_kaggle_dataset("owner/name", tmp_path / "set")
+    assert not (tmp_path / "set" / ".complete").exists()
+
+
 def test_list_image_folder_labels_by_parent_folder(tmp_path):
     make_image_tree(tmp_path)
     paths, labels, class_names = list_image_folder(tmp_path)
@@ -92,6 +122,19 @@ def test_list_image_folder_skips_unreadable_and_non_image_files(tmp_path):
     paths, _, _ = list_image_folder(tmp_path)
     assert len(paths) == 20
     assert all(path.suffix == ".bmp" for path in paths)
+
+
+def test_list_image_folder_skips_truncated_images(tmp_path):
+    """Skips truncated BMP files that cannot be decoded during actual use."""
+    make_image_tree(tmp_path)
+    full_bmp_path = tmp_path / "data" / "bike" / "full.bmp"
+    Image.new("RGB", (64, 64), (100, 100, 100)).save(full_bmp_path)
+    full_bytes = full_bmp_path.read_bytes()
+    truncated_bmp_path = tmp_path / "data" / "bike" / "truncated.bmp"
+    truncated_bmp_path.write_bytes(full_bytes[:len(full_bytes) // 2])
+    paths, _, _ = list_image_folder(tmp_path)
+    assert truncated_bmp_path not in paths
+    assert len(paths) == 21
 
 
 def test_stratified_split_keeps_proportions_and_is_disjoint():

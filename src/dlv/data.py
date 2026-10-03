@@ -44,8 +44,8 @@ def is_readable_image(path: Path) -> bool:
         return False
     try:
         with Image.open(path) as image:
-            image.verify()
-    except Exception:
+            image.load()
+    except (OSError, SyntaxError, ValueError):
         return False
     return True
 
