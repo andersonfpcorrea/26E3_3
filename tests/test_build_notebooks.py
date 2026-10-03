@@ -37,6 +37,31 @@ def test_strip_rejects_plain_package_import():
         strip_package_imports("import dlv.data\n")
 
 
+def test_strip_rejects_import_with_trailing_comment_paren():
+    with pytest.raises(ValueError, match="single-line"):
+        strip_package_imports("from dlv.x import a  # (note)\n")
+
+
+def test_strip_rejects_indented_import():
+    with pytest.raises(ValueError, match="single-line"):
+        strip_package_imports("def foo():\n    from dlv.x import a\n")
+
+
+def test_strip_rejects_import_without_trailing_newline():
+    with pytest.raises(ValueError, match="single-line"):
+        strip_package_imports("from dlv.x import a")
+
+
+def test_strip_rejects_backslash_continued_import():
+    with pytest.raises(ValueError, match="single-line"):
+        strip_package_imports("from dlv.x import \\\n    a\n")
+
+
+def test_strip_allows_dlv_in_docstring_middle():
+    source = 'x = """\nThis mentions dlv in the middle\n"""\n'
+    assert strip_package_imports(source) == source
+
+
 def test_build_orders_cells_by_filename_and_inlines_modules(tmp_path):
     cells, package = make_sources(tmp_path)
     notebook = build_notebook(cells, package)

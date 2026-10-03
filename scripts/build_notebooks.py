@@ -20,8 +20,9 @@ NOTEBOOKS = {"a3": "A3_cnn_kaggle"}
 
 PACKAGE_IMPORT = re.compile(r"^from dlv(\.\w+)* import [^(\n]+\n", re.MULTILINE)
 UNSUPPORTED_IMPORT = re.compile(
-    r"^(import dlv|from dlv(\.\w+)* import \()", re.MULTILINE
+    r"^(import dlv|from dlv(\.\w+)* import \(|from dlv(\.\w+)* import [^(\n]*\\)", re.MULTILINE
 )
+REMAINING_IMPORT = re.compile(r"^\s*(from dlv\b|import dlv\b)", re.MULTILINE)
 
 
 def strip_package_imports(source: str) -> str:
@@ -33,14 +34,19 @@ def strip_package_imports(source: str) -> str:
         raise ValueError(
             "only single-line 'from dlv.<module> import <names>' imports are supported"
         )
-    return PACKAGE_IMPORT.sub("", source).strip() + "\n"
+    result = PACKAGE_IMPORT.sub("", source).strip() + "\n"
+    if REMAINING_IMPORT.search(result):
+        raise ValueError(
+            "only single-line 'from dlv.<module> import <names>' imports are supported"
+        )
+    return result
 
 
 def module_cells(listing: str, package_dir: Path) -> list:
     """Returns one code cell per module named in a ``.modules`` listing."""
     names = [line.strip() for line in listing.splitlines() if line.strip()]
     return [
-        new_code_cell(strip_package_imports((package_dir / f"{name}.py").read_text()))
+        new_code_cell(strip_package_imports((package_dir / f"{name}.py").read_text(encoding="utf-8")))
         for name in names
     ]
 
@@ -49,7 +55,7 @@ def build_notebook(cells_dir: Path, package_dir: Path) -> nbformat.NotebookNode:
     """Assembles a notebook from the files of a cell folder, in filename order."""
     cells = []
     for path in sorted(Path(cells_dir).iterdir()):
-        text = path.read_text() if path.suffix in {".md", ".py", ".modules"} else ""
+        text = path.read_text(encoding="utf-8") if path.suffix in {".md", ".py", ".modules"} else ""
         if path.suffix == ".md":
             cells.append(new_markdown_cell(text.strip()))
         elif path.suffix == ".py":
