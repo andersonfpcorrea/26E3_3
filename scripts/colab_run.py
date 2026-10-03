@@ -32,17 +32,31 @@ def find_errors(notebook_path: Path) -> list[str]:
 
 def collect_outputs(
     archive: Path, activity: str, results_dir: Path, figures_dir: Path
-) -> None:
-    """Copies metrics and figures from a run archive into the repository."""
+) -> bool:
+    """Copies metrics and figures from a run archive into the repository.
+
+    Returns True if metrics.json was found in the archive, False otherwise.
+    """
     results_dir.mkdir(parents=True, exist_ok=True)
     figures_dir.mkdir(parents=True, exist_ok=True)
+    metrics_found = False
     with ZipFile(archive) as bundle:
         for name in bundle.namelist():
             if name == "metrics.json":
                 (results_dir / f"{activity}.json").write_bytes(bundle.read(name))
+                metrics_found = True
             elif name.startswith("figures/") and name.endswith(".png"):
                 target = figures_dir / f"{activity}_{Path(name).name}"
                 target.write_bytes(bundle.read(name))
+    return metrics_found
+
+
+def _stop_session_safely(session: str, execute) -> None:
+    """Stops a Colab session, catching and logging errors without raising."""
+    try:
+        execute(["colab", "stop", "-s", session], check=False)
+    except OSError as error:
+        print(f"warning: could not stop session {session}: {error}", file=sys.stderr)
 
 
 def run_on_colab(activity: str, execute=run) -> int:
@@ -76,8 +90,11 @@ def run_on_colab(activity: str, execute=run) -> int:
         print(f"colab run failed: {failure}", file=sys.stderr)
         return 1
     finally:
-        execute(["colab", "stop", "-s", session], check=False)
-    collect_outputs(archive, activity, ROOT / "results", ROOT / "report" / "figures")
+        _stop_session_safely(session, execute)
+    metrics_found = collect_outputs(archive, activity, ROOT / "results", ROOT / "report" / "figures")
+    if not metrics_found:
+        print(f"colab run failed: no metrics.json in archive for {activity}", file=sys.stderr)
+        return 1
     (ROOT / "notebooks").mkdir(exist_ok=True)
     copyfile(executed, ROOT / "notebooks" / f"{name}.ipynb")
     return 0

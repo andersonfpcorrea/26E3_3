@@ -1,6 +1,7 @@
 """Tests for the Colab runner."""
 
 import json
+from pathlib import Path
 from subprocess import CalledProcessError
 from zipfile import ZipFile
 
@@ -77,3 +78,55 @@ def test_run_fails_when_a_cell_raised(tmp_path, monkeypatch):
     assert run_on_colab("a3", execute=execute) == 1
     assert ["colab", "download"] not in commands
     assert commands[-1] == ["colab", "stop"]
+
+
+def test_run_succeeds_and_collects_outputs(tmp_path, monkeypatch):
+    prepare_build(tmp_path, monkeypatch)
+    commands = []
+
+    def execute(command, **kwargs):
+        commands.append(command)
+        if command[1] == "exec":
+            output_notebook = kwargs["cwd"] / "A3_cnn_kaggle_output.ipynb"
+            write_notebook(output_notebook, [])
+        elif command[1] == "download":
+            archive_path = Path(command[-1])
+            with ZipFile(archive_path, "w") as bundle:
+                bundle.writestr("metrics.json", json.dumps({"accuracy": 0.95}))
+                bundle.writestr("figures/history.png", b"png-bytes")
+
+    assert run_on_colab("a3", execute=execute) == 0
+    download_cmd = [cmd for cmd in commands if cmd[1] == "download"][0]
+    assert download_cmd[4] == "/content/outputs_a3.zip"
+    assert json.loads((tmp_path / "results" / "a3.json").read_text()) == {"accuracy": 0.95}
+    assert (tmp_path / "report" / "figures" / "a3_history.png").exists()
+    assert (tmp_path / "notebooks" / "A3_cnn_kaggle.ipynb").exists()
+    assert commands[-1][:2] == ["colab", "stop"]
+
+
+def test_run_fails_with_missing_metrics(tmp_path, monkeypatch):
+    prepare_build(tmp_path, monkeypatch)
+    commands = []
+
+    def execute(command, **kwargs):
+        commands.append(command[:2])
+        if command[1] == "exec":
+            output_notebook = kwargs["cwd"] / "A3_cnn_kaggle_output.ipynb"
+            write_notebook(output_notebook, [])
+        elif command[1] == "download":
+            archive_path = Path(command[-1])
+            with ZipFile(archive_path, "w") as bundle:
+                bundle.writestr("figures/history.png", b"png-bytes")
+
+    assert run_on_colab("a3", execute=execute) == 1
+    assert not (tmp_path / "notebooks" / "A3_cnn_kaggle.ipynb").exists()
+    assert commands[-1] == ["colab", "stop"]
+
+
+def test_session_is_stopped_safely_when_colab_missing(tmp_path, monkeypatch):
+    prepare_build(tmp_path, monkeypatch)
+
+    def execute(command, **kwargs):
+        raise FileNotFoundError("colab not found")
+
+    assert run_on_colab("a3", execute=execute) == 1
