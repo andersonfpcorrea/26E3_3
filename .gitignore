@@ -1,0 +1,11 @@
+/req
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.ipynb_checkpoints/
+.DS_Store
+.remember/
+/data/
+/build/
+/entrega/

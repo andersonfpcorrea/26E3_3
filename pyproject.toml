@@ -1,0 +1,29 @@
+[project]
+name = "dlv"
+version = "0.1.0"
+description = "Computer Vision course project (INFNET 26E3_3)"
+requires-python = ">=3.13"
+dependencies = [
+    "torch~=2.11.0",
+    "torchvision~=0.26.0",
+    "numpy>=2.0",
+    "matplotlib>=3.9",
+    "scikit-learn>=1.5",
+    "pillow>=10.4",
+    "requests>=2.32",
+]
+
+[dependency-groups]
+dev = ["pytest>=8.3", "nbformat>=5.10"]
+report = ["markdown>=3.6", "xhtml2pdf>=0.2.16"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["scripts"]
