@@ -1,10 +1,16 @@
 from collections import Counter
 
 from dlv.cnn import imagenet_transform
-from dlv.data import ImageListDataset, download_kaggle_dataset, list_image_folder, stratified_split
+from dlv.data import IMAGE_SUFFIXES, ImageListDataset, download_kaggle_dataset, list_image_folder, stratified_split
 
 dataset_root = download_kaggle_dataset(DATASET_SLUG, DATA_DIR)
 paths, labels, class_names = list_image_folder(dataset_root)
+files_found = sum(
+    1
+    for path in dataset_root.rglob("*")
+    if path.is_file() and path.suffix.lower() in IMAGE_SUFFIXES and not path.name.startswith(".")
+)
+duplicates_removed = files_found - len(paths)
 train_indices, validation_indices, test_indices = stratified_split(labels, seed=SEED)
 transform = imagenet_transform()
 
@@ -27,6 +33,8 @@ split_sizes = {
     "validation": len(validation_indices),
     "test": len(test_indices),
 }
+print("arquivos de imagem no download:", files_found)
+print("cópias exatas removidas:", duplicates_removed)
 print("classes:", class_names)
 print("imagens por classe:", class_counts)
 print("divisão:", split_sizes)

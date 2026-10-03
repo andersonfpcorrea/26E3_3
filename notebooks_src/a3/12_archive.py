@@ -3,6 +3,8 @@ metrics = {
     "class_names": class_names,
     "class_counts": class_counts,
     "split_sizes": split_sizes,
+    "files_found": files_found,
+    "duplicates_removed": duplicates_removed,
     "hyperparameters": {
         "backbone": "resnet50 IMAGENET1K_V2",
         "batch_size": BATCH_SIZE,
