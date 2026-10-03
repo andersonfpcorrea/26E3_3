@@ -2,6 +2,7 @@
 
 from collections import Counter
 from io import BytesIO
+from shutil import copytree
 from zipfile import ZipFile, BadZipFile
 
 import pytest
@@ -21,12 +22,22 @@ from dlv.data import (
 
 def make_image_tree(root, classes=("bike", "car"), per_class=10):
     """Creates a folder per class with small solid-colour images."""
-    for name in classes:
+    for position, name in enumerate(classes):
         folder = root / "data" / name
         folder.mkdir(parents=True)
         for index in range(per_class):
-            Image.new("RGB", (8, 8), (index * 20, 0, 0)).save(folder / f"{name}_{index}.bmp")
+            Image.new("RGB", (8, 8), (index * 20, position * 100, 0)).save(folder / f"{name}_{index}.bmp")
     return root
+
+
+def test_list_image_folder_leaves_out_exact_copies(tmp_path):
+    make_image_tree(tmp_path)
+    copytree(tmp_path / "data", tmp_path / "data" / "data")
+    paths, labels, _ = list_image_folder(tmp_path)
+    assert len(paths) == 20
+    assert Counter(labels) == {0: 10, 1: 10}
+    contents = [path.read_bytes() for path in paths]
+    assert len(set(contents)) == len(contents)
 
 
 class FakeResponse:

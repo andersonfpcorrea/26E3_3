@@ -1,6 +1,7 @@
 """Dataset download, image discovery and splitting shared by the notebooks."""
 
 from collections import Counter
+from hashlib import sha256
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -50,13 +51,26 @@ def is_readable_image(path: Path) -> bool:
     return True
 
 
+def file_digest(path: Path) -> str:
+    """Returns the SHA-256 hash of a file's bytes."""
+    return sha256(path.read_bytes()).hexdigest()
+
+
 def list_image_folder(root: Path) -> tuple[list[Path], list[int], list[str]]:
     """Finds every readable image under root and labels it by its parent folder.
 
     Returns the image paths, one integer label per path, and the class names
-    in the order used by the labels. Unreadable files are left out.
+    in the order used by the labels. Unreadable files are left out, and so are
+    exact copies of a file already kept (the first path in sorted order wins).
     """
-    paths = sorted(path for path in Path(root).rglob("*") if path.is_file() and is_readable_image(path))
+    readable = sorted(path for path in Path(root).rglob("*") if path.is_file() and is_readable_image(path))
+    seen = set()
+    paths = []
+    for path in readable:
+        digest = file_digest(path)
+        if digest not in seen:
+            seen.add(digest)
+            paths.append(path)
     class_names = sorted({path.parent.name for path in paths})
     index = {name: position for position, name in enumerate(class_names)}
     labels = [index[path.parent.name] for path in paths]
