@@ -130,3 +130,17 @@ def test_session_is_stopped_safely_when_colab_missing(tmp_path, monkeypatch):
         raise FileNotFoundError("colab not found")
 
     assert run_on_colab("a3", execute=execute) == 1
+
+
+def test_exec_uses_a_long_per_cell_timeout(tmp_path, monkeypatch):
+    prepare_build(tmp_path, monkeypatch)
+    commands = []
+
+    def execute(command, **kwargs):
+        commands.append(command)
+        if command[1] == "exec":
+            raise CalledProcessError(1, command)
+
+    run_on_colab("a3", execute=execute)
+    exec_command = next(command for command in commands if command[1] == "exec")
+    assert exec_command[exec_command.index("--timeout") + 1] == "1800"

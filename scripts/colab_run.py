@@ -74,7 +74,7 @@ def run_on_colab(activity: str, execute=run) -> int:
         execute(["colab", "stop", "-s", session], check=False, capture_output=True)
         execute(["colab", "new", "-s", session, "--gpu", "T4"], check=True)
         execute(
-            ["colab", "exec", "-s", session, "-f", f"{name}.ipynb"],
+            ["colab", "exec", "-s", session, "-f", f"{name}.ipynb", "--timeout", "1800"],
             check=True,
             cwd=work_dir,
         )
