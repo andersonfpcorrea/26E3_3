@@ -50,11 +50,12 @@ def plot_per_class_accuracy(
 ) -> Figure:
     """Draws one bar per class with its accuracy on the test set."""
     figure, axis = plt.subplots(figsize=(max(6, 0.8 * len(class_names)), 4))
-    axis.bar(class_names, per_class_accuracy)
+    positions = range(len(class_names))
+    axis.bar(positions, per_class_accuracy)
+    axis.set_xticks(positions, labels=class_names, rotation=45, ha="right")
     axis.set_ylim(0, 1.05)
     axis.set_xlabel("Classe")
     axis.set_ylabel("Acurácia")
-    axis.tick_params(axis="x", rotation=45)
     figure.tight_layout()
     figure.savefig(path, dpi=150)
     return figure

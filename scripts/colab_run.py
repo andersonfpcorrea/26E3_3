@@ -52,11 +52,18 @@ def collect_outputs(
 
 
 def _stop_session_safely(session: str, execute) -> None:
-    """Stops a Colab session, catching and logging errors without raising."""
+    """Stops a Colab session and never raises.
+
+    A stop that cannot be launched or that exits with an error prints a
+    warning, because the session may still be running and using the GPU quota.
+    """
     try:
-        execute(["colab", "stop", "-s", session], check=False)
+        returncode = getattr(execute(["colab", "stop", "-s", session], check=False), "returncode", 0)
+        reason = f"'colab stop' ended with exit code {returncode}" if returncode else ""
     except OSError as error:
-        print(f"warning: could not stop session {session}: {error}", file=sys.stderr)
+        reason = f"'colab stop' could not run: {error}"
+    if reason:
+        print(f"warning: session {session} may still be running: {reason}", file=sys.stderr)
 
 
 def run_on_colab(activity: str, execute=run) -> int:

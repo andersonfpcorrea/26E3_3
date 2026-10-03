@@ -28,3 +28,12 @@ def test_plot_per_class_accuracy_draws_one_bar_per_class(tmp_path):
     figure = plot_per_class_accuracy([0.75, 1.0], ["bike", "car"], tmp_path / "per_class.png")
     assert (tmp_path / "per_class.png").stat().st_size > 0
     assert len(figure.axes[0].patches) == 2
+
+
+def test_plot_per_class_accuracy_anchors_rotated_labels_on_the_right(tmp_path):
+    """Class names are rotated and end under their own bar."""
+    figure = plot_per_class_accuracy([0.75, 1.0], ["bike", "car"], tmp_path / "per_class.png")
+    labels = figure.axes[0].get_xticklabels()
+    assert [label.get_text() for label in labels] == ["bike", "car"]
+    assert all(label.get_ha() == "right" for label in labels)
+    assert all(label.get_rotation() == 45 for label in labels)

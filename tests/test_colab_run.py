@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from subprocess import CalledProcessError
+from subprocess import CalledProcessError, CompletedProcess
 from zipfile import ZipFile
 
 import nbformat
@@ -160,3 +160,47 @@ def test_exec_uses_a_long_per_cell_timeout(tmp_path, monkeypatch):
     run_on_colab("a3", execute=execute)
     exec_command = next(command for command in commands if command[1] == "exec")
     assert exec_command[exec_command.index("--timeout") + 1] == "1800"
+
+
+def test_warning_is_printed_when_the_final_stop_fails(tmp_path, monkeypatch, capsys):
+    """A stop command that exits with an error warns that the session may live on."""
+    prepare_build(tmp_path, monkeypatch)
+
+    def execute(command, **kwargs):
+        """Fails the notebook execution and every stop command."""
+        if command[1] == "exec":
+            raise CalledProcessError(1, command)
+        return CompletedProcess(command, returncode=1 if command[1] == "stop" else 0)
+
+    assert run_on_colab("a3", execute=execute) == 1
+    warning = capsys.readouterr().err
+    assert "warning: session dlv-a3 may still be running" in warning
+    assert "exit code 1" in warning
+
+
+def test_warning_is_printed_when_the_stop_command_cannot_start(tmp_path, monkeypatch, capsys):
+    """A stop command that cannot be launched gives the same warning."""
+    prepare_build(tmp_path, monkeypatch)
+
+    def execute(command, **kwargs):
+        """Behaves as if the colab program were not installed."""
+        raise FileNotFoundError("colab not found")
+
+    assert run_on_colab("a3", execute=execute) == 1
+    warning = capsys.readouterr().err
+    assert "warning: session dlv-a3 may still be running" in warning
+    assert "colab not found" in warning
+
+
+def test_no_warning_when_the_final_stop_succeeds(tmp_path, monkeypatch, capsys):
+    """A stop command that exits with 0 prints no warning."""
+    prepare_build(tmp_path, monkeypatch)
+
+    def execute(command, **kwargs):
+        """Fails the notebook execution and lets every other command succeed."""
+        if command[1] == "exec":
+            raise CalledProcessError(1, command)
+        return CompletedProcess(command, returncode=0)
+
+    assert run_on_colab("a3", execute=execute) == 1
+    assert "warning" not in capsys.readouterr().err
