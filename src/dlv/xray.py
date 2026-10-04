@@ -1,6 +1,7 @@
 """Chest X-ray data preparation and per-class metrics for the COVID-19 screening case study."""
 
 import random
+from math import pi
 from pathlib import Path
 from statistics import fmean, stdev
 
@@ -8,9 +9,11 @@ import numpy as np
 import torch
 from PIL.Image import Resampling
 from PIL.Image import open as open_image
-from torch import Tensor
+from torch import Tensor, nn
+from torch.nn.functional import affine_grid, grid_sample, interpolate
+from torchvision.models import ResNet18_Weights, resnet18
 
-from dlv.data import file_digest, is_readable_image
+from dlv.data import IMAGENET_MEAN, IMAGENET_STD, file_digest, has_image_name, is_readable_image
 
 XRAY_CLASSES = (
     ("Normal", "Normal"),
@@ -42,6 +45,22 @@ def find_class_root(root: Path) -> Path:
             f"and <dataset folder>/COVID/images"
         )
     return holders[0]
+
+
+def count_xray_files(root: Path) -> int:
+    """Counts the files named like images directly inside ``<class folder>/images/``.
+
+    Nothing is opened, so exact copies and unreadable files are counted too.
+    This is the size of the study classes before any cleaning, with masks and
+    other class folders left out.
+    """
+    root = find_class_root(root)
+    total = 0
+    for folder, _ in XRAY_CLASSES:
+        images = root / folder / "images"
+        if images.is_dir():
+            total += sum(1 for path in images.iterdir() if path.is_file() and has_image_name(path))
+    return total
 
 
 def list_xray_images(root: Path) -> tuple[list[Path], list[int]]:
@@ -187,3 +206,110 @@ def summarise_runs(reports: list[list[dict]], metric: str) -> list[dict]:
         spread = stdev(values) if len(values) > 1 else 0.0
         summary.append({"class": position, "mean": fmean(values), "std": spread})
     return summary
+
+
+def inverse_frequency_weights(labels: list[int], num_classes: int) -> Tensor:
+    """Returns one loss weight per class, inversely proportional to its share of the labels.
+
+    A class with ``n`` of ``total`` labels gets ``total / (num_classes * n)``,
+    so a balanced set gives all ones. Raises ValueError naming the class when
+    it has no label, since its weight would be infinite.
+    """
+    counts = torch.bincount(torch.as_tensor(labels, dtype=torch.long), minlength=num_classes).float()
+    missing = (counts == 0).nonzero()
+    if missing.numel():
+        raise ValueError(f"class {int(missing[0])} has no labels, so it has no weight")
+    return counts.sum() / (num_classes * counts)
+
+
+def build_resnet18(num_classes: int, pretrained: bool) -> nn.Module:
+    """Builds a ResNet-18 with a new final layer of ``num_classes`` outputs.
+
+    With ``pretrained`` the backbone starts from the ImageNet weights, and
+    otherwise from random ones. Every layer stays trainable.
+    """
+    weights = ResNet18_Weights.IMAGENET1K_V1 if pretrained else None
+    model = resnet18(weights=weights)
+    model.fc = nn.Linear(model.fc.in_features, num_classes)
+    return model
+
+
+class XrayBatches:
+    """Batches of grayscale X-rays served from uint8 tensors held in memory, ready for a ResNet.
+
+    Iterating yields ``(images, labels)`` with float images shaped
+    (n, 3, size, size): the single channel is repeated three times, resized to
+    ``output_size`` when given and normalised with the ImageNet statistics.
+    With ``augment``, every image first gets its own random rotation of up to
+    ``max_degrees`` and its own random shift of up to ``max_shift`` pixels, with
+    black filling the corners and no mirroring, since left and right matter in
+    a chest X-ray. The random numbers come from a CPU generator seeded by
+    ``seed``, so a seed fixes shuffling and augmentation on any device, and
+    every new iteration is one epoch.
+    """
+
+    def __init__(
+        self,
+        images: Tensor,
+        labels: Tensor,
+        batch_size: int,
+        output_size: int | None = None,
+        augment: bool = False,
+        shuffle: bool = False,
+        max_shift: float = 4.0,
+        max_degrees: float = 7.0,
+        seed: int = 0,
+        device: torch.device | str = "cpu",
+    ):
+        """Moves the images and labels to the device and stores the batch settings."""
+        self.images = images.to(device)
+        self.labels = torch.as_tensor(labels, dtype=torch.long).to(device)
+        self.batch_size = batch_size
+        self.output_size = output_size
+        self.augment = augment
+        self.shuffle = shuffle
+        self.max_shift = max_shift
+        self.max_degrees = max_degrees
+        self.generator = torch.Generator().manual_seed(seed)
+        self.mean = torch.tensor(IMAGENET_MEAN, device=device).view(1, 3, 1, 1)
+        self.std = torch.tensor(IMAGENET_STD, device=device).view(1, 3, 1, 1)
+
+    def __len__(self) -> int:
+        """Returns the number of batches in one epoch."""
+        return -(-self.images.shape[0] // self.batch_size)
+
+    def transform(self, images: Tensor) -> Tensor:
+        """Rotates and shifts every image of a float batch in 0 to 1 by its own random amounts."""
+        count, _, height, width = images.shape
+        draws = torch.rand(count, 3, generator=self.generator) * 2 - 1
+        angles = draws[:, 0] * self.max_degrees * pi / 180
+        shift_x = draws[:, 1] * self.max_shift * 2 / width
+        shift_y = draws[:, 2] * self.max_shift * 2 / height
+        theta = torch.stack(
+            [
+                torch.stack([angles.cos(), -angles.sin(), shift_x], dim=1),
+                torch.stack([angles.sin(), angles.cos(), shift_y], dim=1),
+            ],
+            dim=1,
+        ).to(images.device)
+        grid = affine_grid(theta, list(images.shape), align_corners=False)
+        return grid_sample(images, grid, mode="bilinear", padding_mode="zeros", align_corners=False)
+
+    def __iter__(self):
+        """Yields the batches of one epoch."""
+        count = self.images.shape[0]
+        if self.shuffle:
+            order = torch.randperm(count, generator=self.generator).to(self.images.device)
+        else:
+            order = torch.arange(count, device=self.images.device)
+        for start in range(0, count, self.batch_size):
+            chosen = order[start : start + self.batch_size]
+            images = self.images[chosen].float() / 255
+            if self.augment:
+                images = self.transform(images)
+            images = images.expand(-1, 3, -1, -1)
+            if self.output_size is not None and self.output_size != images.shape[-1]:
+                images = interpolate(
+                    images, size=(self.output_size, self.output_size), mode="bilinear", align_corners=False
+                )
+            yield (images - self.mean) / self.std, self.labels[chosen]

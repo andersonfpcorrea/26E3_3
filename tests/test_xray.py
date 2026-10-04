@@ -8,7 +8,11 @@ from PIL import Image
 
 from dlv.xray import (
     XRAY_CLASSES,
+    XrayBatches,
+    build_resnet18,
     class_report,
+    count_xray_files,
+    inverse_frequency_weights,
     list_xray_images,
     load_grayscale,
     mix_synthetic,
@@ -289,3 +293,93 @@ def test_sampling_second_draw_excluding_first_does_not_overlap():
     assert [labels[i] for i in second].count(1) == 9
     assert [labels[i] for i in first].count(0) == 5
     assert [labels[i] for i in first].count(1) == 3
+
+
+def test_count_xray_files_counts_copies_and_unreadable_files_but_not_masks(tmp_path):
+    """The count covers every image-named file of the three classes before cleaning."""
+    make_xray_tree(tmp_path)
+    save(tmp_path / "Normal" / "images" / "copy.png", 17)
+    (tmp_path / "Normal" / "images" / "broken.png").write_bytes(b"not an image")
+    assert count_xray_files(tmp_path) == 11
+
+
+def test_inverse_frequency_weights_balance_the_classes():
+    """A balanced set gives ones and a rarer class gets a larger weight."""
+    assert inverse_frequency_weights([0, 1, 2, 0, 1, 2], 3).tolist() == [1.0, 1.0, 1.0]
+    weights = inverse_frequency_weights([0, 0, 0, 0, 1, 2], 3)
+    assert weights.tolist() == pytest.approx([0.5, 2.0, 2.0])
+
+
+def test_inverse_frequency_weights_name_a_class_without_labels():
+    """A class that never appears has no finite weight, so the error names it."""
+    with pytest.raises(ValueError, match="class 2"):
+        inverse_frequency_weights([0, 1, 1], 3)
+
+
+def test_build_resnet18_has_a_new_head_and_trainable_layers():
+    """The model ends in one output per class and every parameter trains."""
+    model = build_resnet18(3, pretrained=False)
+    assert model.fc.out_features == 3
+    assert all(parameter.requires_grad for parameter in model.parameters())
+    assert model(torch.zeros(2, 3, 64, 64)).shape == (2, 3)
+
+
+def xray_batches(images, **overrides):
+    """Builds batches over uint8 images with labels counting up from zero."""
+    settings = dict(images=images, labels=torch.arange(images.shape[0]), batch_size=4)
+    settings.update(overrides)
+    return XrayBatches(**settings)
+
+
+def test_xray_batches_repeat_channels_resize_and_normalise():
+    """Batches are float, three channels, resized and shifted by the ImageNet statistics."""
+    images = torch.full((5, 1, 8, 8), 255, dtype=torch.uint8)
+    batches = list(xray_batches(images, output_size=16))
+    assert [batch.shape[0] for batch, _ in batches] == [4, 1]
+    assert batches[0][0].shape == (4, 3, 16, 16)
+    assert batches[0][0][0, 0, 0, 0].item() == pytest.approx((1 - 0.485) / 0.229, abs=1e-4)
+    assert batches[0][0][0, 2, 0, 0].item() == pytest.approx((1 - 0.406) / 0.225, abs=1e-4)
+    assert len(xray_batches(images)) == 2
+
+
+def test_xray_batches_without_options_keep_order_and_labels():
+    """Without shuffling or augmentation the same images come back in order, unchanged."""
+    images = torch.randint(0, 256, (6, 1, 8, 8), dtype=torch.uint8)
+    first = list(xray_batches(images))
+    second = list(xray_batches(images))
+    labels = torch.cat([batch_labels for _, batch_labels in first])
+    assert labels.tolist() == list(range(6))
+    assert torch.equal(first[0][0], second[0][0])
+
+
+def test_xray_batches_augmentation_moves_pixels_without_mirroring():
+    """Augmented images differ from plain ones, change between epochs and a seed repeats them."""
+    images = torch.zeros(8, 1, 16, 16, dtype=torch.uint8)
+    images[:, :, 4:12, 2:6] = 200
+    plain = next(iter(xray_batches(images, batch_size=8)))[0]
+    augmented = xray_batches(images, batch_size=8, augment=True, seed=1)
+    epoch_one = next(iter(augmented))[0]
+    epoch_two = next(iter(augmented))[0]
+    repeated = next(iter(xray_batches(images, batch_size=8, augment=True, seed=1)))[0]
+    assert not torch.equal(plain, epoch_one)
+    assert not torch.equal(epoch_one, epoch_two)
+    assert torch.equal(epoch_one, repeated)
+    left, right = epoch_one[:, 0, :, :8], epoch_one[:, 0, :, 8:]
+    assert left.sum() > 2 * right.sum()
+
+
+def test_xray_batches_zero_range_augmentation_is_the_identity():
+    """With no shift and no rotation allowed, augmentation leaves the image as it is."""
+    images = torch.randint(0, 256, (4, 1, 8, 8), dtype=torch.uint8)
+    plain = next(iter(xray_batches(images)))[0]
+    same = next(iter(xray_batches(images, augment=True, max_shift=0.0, max_degrees=0.0)))[0]
+    assert torch.allclose(plain, same, atol=1e-4)
+
+
+def test_xray_batches_shuffle_visits_every_image_once():
+    """Shuffling changes the order but every label appears exactly once per epoch."""
+    images = torch.zeros(10, 1, 8, 8, dtype=torch.uint8)
+    batches = xray_batches(images, shuffle=True, seed=3)
+    labels = torch.cat([batch_labels for _, batch_labels in batches]).tolist()
+    assert sorted(labels) == list(range(10))
+    assert labels != list(range(10))
