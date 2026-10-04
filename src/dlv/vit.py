@@ -1,7 +1,8 @@
-"""Vision Transformer built from patch embedding and encoder blocks."""
+"""Vision Transformer built from patch embedding and encoder blocks, and a pre-trained one to fine-tune."""
 
 import torch
 from torch import Tensor, nn
+from torchvision.models import ViT_B_16_Weights, vit_b_16
 
 from dlv.attention import TransformerEncoderBlock
 
@@ -107,3 +108,30 @@ def class_token_attention(attention: Tensor, grid_size: int) -> Tensor:
     """
     patches = attention[:, :, 0, 1:]
     return patches.reshape(*patches.shape[:2], grid_size, grid_size)
+
+
+def build_pretrained_vit(
+    num_classes: int, weights: ViT_B_16_Weights | None = ViT_B_16_Weights.IMAGENET1K_V1
+) -> nn.Module:
+    """Builds a torchvision ViT-B/16 with a new head, ready for full fine-tuning.
+
+    The classification head is replaced by a fresh linear layer with one
+    output per class. Every layer keeps receiving gradients. Pass
+    ``weights=None`` to skip the download and start from random weights.
+    """
+    model = vit_b_16(weights=weights)
+    model.heads.head = nn.Linear(model.heads.head.in_features, num_classes)
+    return model
+
+
+def fine_tuning_groups(model: nn.Module, backbone_lr: float, head_lr: float) -> list[dict]:
+    """Splits the parameters of a torchvision ViT into backbone and head groups.
+
+    Returns two optimizer parameter groups, backbone first, each with its own
+    learning rate. The new head starts from random weights and can take a much
+    larger rate than the pre-trained layers.
+    """
+    head = list(model.heads.parameters())
+    head_ids = {id(parameter) for parameter in head}
+    backbone = [parameter for parameter in model.parameters() if id(parameter) not in head_ids]
+    return [{"params": backbone, "lr": backbone_lr}, {"params": head, "lr": head_lr}]

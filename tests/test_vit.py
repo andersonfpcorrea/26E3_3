@@ -2,8 +2,15 @@
 
 import pytest
 import torch
+from torch import nn
 
-from dlv.vit import PatchEmbedding, VisionTransformer, class_token_attention
+from dlv.vit import (
+    PatchEmbedding,
+    VisionTransformer,
+    build_pretrained_vit,
+    class_token_attention,
+    fine_tuning_groups,
+)
 
 
 def shuffle_patches(images, patch_size, permutation):
@@ -131,3 +138,29 @@ def test_gradients_reach_the_class_token_and_head():
     model(torch.randn(2, 3, 64, 64)).sum().backward()
     assert model.class_token.grad is not None
     assert model.head.weight.grad is not None
+
+
+def test_pretrained_vit_gets_a_new_head_with_one_output_per_class():
+    """The classification head is replaced and every layer stays trainable."""
+    model = build_pretrained_vit(num_classes=8, weights=None)
+    assert isinstance(model.heads.head, nn.Linear)
+    assert model.heads.head.out_features == 8
+    assert all(parameter.requires_grad for parameter in model.parameters())
+    model.eval()
+    with torch.no_grad():
+        assert model(torch.zeros(1, 3, 224, 224)).shape == (1, 8)
+
+
+def test_fine_tuning_groups_split_head_from_backbone_without_overlap():
+    """The head gets its own learning rate and every parameter is in exactly one group."""
+    model = build_pretrained_vit(num_classes=8, weights=None)
+    backbone, head = fine_tuning_groups(model, backbone_lr=3e-5, head_lr=1e-3)
+    assert backbone["lr"] == 3e-5
+    assert head["lr"] == 1e-3
+    head_ids = {id(parameter) for parameter in head["params"]}
+    backbone_ids = {id(parameter) for parameter in backbone["params"]}
+    assert head_ids == {id(parameter) for parameter in model.heads.parameters()}
+    assert not head_ids & backbone_ids
+    assert len(head_ids | backbone_ids) == len(list(model.parameters()))
+    optimizer = torch.optim.AdamW([backbone, head], weight_decay=0.05)
+    assert [group["lr"] for group in optimizer.param_groups] == [3e-5, 1e-3]
