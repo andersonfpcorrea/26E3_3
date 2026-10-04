@@ -10,7 +10,7 @@ import pytest
 import torch
 
 from dlv import run as run_module
-from dlv.run import Run, peak_ram_mb, save_run, seed_everything, start_run
+from dlv.run import Run, Stopwatch, peak_ram_mb, save_run, seed_everything, start_run
 
 
 def test_seed_everything_makes_random_numbers_repeatable():
@@ -104,3 +104,29 @@ def test_peak_ram_reads_the_unit_of_each_platform(monkeypatch, platform, expecte
     monkeypatch.setattr(run_module.sys, "platform", platform)
     monkeypatch.setattr(run_module, "getrusage", lambda who: Usage())
     assert peak_ram_mb() == expected
+
+
+def test_stopwatch_records_and_prints_each_named_step(monkeypatch, capsys):
+    """Every measured step is stored in seconds under its name and printed."""
+    readings = iter([10.0, 12.54, 20.0, 20.26])
+    monkeypatch.setattr(run_module, "monotonic", lambda: next(readings))
+    stopwatch = Stopwatch()
+    with stopwatch.measure("download"):
+        pass
+    with stopwatch.measure("treino"):
+        pass
+    assert stopwatch.seconds == {"download": 2.5, "treino": 0.3}
+    assert capsys.readouterr().out.splitlines() == ["download: 2.5 s", "treino: 0.3 s"]
+
+
+def test_stopwatch_keeps_step_order_and_leaves_out_a_failed_step():
+    """Steps are listed in the order measured and a step that raises is not recorded."""
+    stopwatch = Stopwatch()
+    with stopwatch.measure("b"):
+        pass
+    with pytest.raises(RuntimeError):
+        with stopwatch.measure("falha"):
+            raise RuntimeError("boom")
+    with stopwatch.measure("a"):
+        pass
+    assert list(stopwatch.seconds) == ["b", "a"]

@@ -9,6 +9,7 @@ run: ``metrics.json`` at the top level and the PNG files under ``figures/``.
 import json
 import random
 import sys
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from resource import RUSAGE_SELF, getrusage
@@ -19,6 +20,30 @@ import numpy as np
 import torch
 
 BYTES_PER_MEGABYTE = 1e6
+
+
+class Stopwatch:
+    """Measures how long the named steps of a run take.
+
+    ``seconds`` maps every finished step to its duration, in the order the
+    steps ran, ready to be saved with the metrics. Each step is also printed
+    when it ends, so the cost of a notebook is visible while it runs.
+    """
+
+    def __init__(self) -> None:
+        """Starts with no step measured."""
+        self.seconds = {}
+
+    @contextmanager
+    def measure(self, name: str):
+        """Times the body of a ``with`` block and records it under ``name``.
+
+        A block that raises is not recorded.
+        """
+        started_at = monotonic()
+        yield
+        self.seconds[name] = round(monotonic() - started_at, 1)
+        print(f"{name}: {self.seconds[name]} s")
 
 
 @dataclass(frozen=True)
