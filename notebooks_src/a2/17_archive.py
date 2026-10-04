@@ -3,8 +3,8 @@ from dlv.run import save_run
 metrics = {
     "files_found": files_found,
     "duplicates_removed": duplicates_removed,
+    "thumbnails_removed": thumbnails_removed,
     "images": len(images),
-    "thumbnail_files": thumbnail_files,
     "by_source": by_source,
     "ad_categories": ad_categories,
     "concepts": PROMPTS,

@@ -1,11 +1,11 @@
 {
   "files_found": 2697,
   "duplicates_removed": 47,
-  "images": 2650,
-  "thumbnail_files": 1149,
+  "thumbnails_removed": 1149,
+  "images": 1501,
   "by_source": {
     "anuncio": 301,
-    "participante": 2349
+    "participante": 1200
   },
   "ad_categories": {
     "1": 16,
@@ -66,82 +66,82 @@
       0.7
     ],
     "share_of_images_above": {
-      "0.3": 0.8498,
-      "0.5": 0.5974,
-      "0.7": 0.3702
+      "0.3": 0.8634,
+      "0.5": 0.6262,
+      "0.7": 0.3997
     },
     "top_probability_quantiles": {
-      "0.05": 0.209,
-      "0.25": 0.38,
-      "0.5": 0.573,
-      "0.75": 0.81,
-      "0.95": 0.965
+      "0.05": 0.216,
+      "0.25": 0.404,
+      "0.5": 0.602,
+      "0.75": 0.832,
+      "0.95": 0.968
     },
     "samples": {
       "0.3": {
         "below": [
-          743,
-          1666,
-          554,
-          1000,
-          879,
-          600,
-          2254,
-          685
+          325,
+          1029,
+          1130,
+          593,
+          1085,
+          250,
+          960,
+          878
         ],
         "above": [
-          2510,
-          499,
-          754,
-          358,
-          713,
-          1017,
-          1798,
-          579
+          404,
+          1004,
+          1372,
+          1292,
+          500,
+          389,
+          1075,
+          1025
         ]
       },
       "0.5": {
         "below": [
-          859,
-          1928,
-          1865,
-          2037,
-          2589,
-          204,
-          996,
-          7
+          1235,
+          1371,
+          366,
+          201,
+          937,
+          1354,
+          705,
+          579
         ],
         "above": [
-          1632,
-          149,
-          966,
-          1190,
-          2295,
-          2127,
-          1101,
-          1284
+          1073,
+          1430,
+          310,
+          1397,
+          87,
+          1120,
+          1421,
+          59
         ]
       },
       "0.7": {
         "below": [
-          220,
-          2091,
-          2259,
-          146,
-          1517,
-          1704,
-          2524,
-          1703
+          453,
+          375,
+          1153,
+          917,
+          125,
+          781,
+          868,
+          1247
         ],
         "above": [
+          397,
+          363,
+          1103,
+          930,
           38,
-          1365,
-          1072,
-          651,
-          951,
-          1287,
-          2619,
-          2503
+          749,
+          857,
+          1232
         ]
       }
     }
@@ -150,185 +150,185 @@
     "corpus": [
       {
         "concept": "a photo of an online advertisement with a lot of text",
-        "mean_similarity": 0.2052876204252243,
-        "mean_probability": 0.1163734421133995,
-        "frequency": 0.09698113054037094,
-        "count": 257
+        "mean_similarity": 0.20867948234081268,
+        "mean_probability": 0.165522038936615,
+        "frequency": 0.15456362068653107,
+        "count": 232
       },
       {
         "concept": "a photo of an animal",
-        "mean_similarity": 0.20472495257854462,
-        "mean_probability": 0.09680171310901642,
-        "frequency": 0.08641509711742401,
-        "count": 229
+        "mean_similarity": 0.2019568681716919,
+        "mean_probability": 0.0897182822227478,
+        "frequency": 0.07994670420885086,
+        "count": 120
       },
       {
         "concept": "a photo of food",
-        "mean_similarity": 0.19697394967079163,
-        "mean_probability": 0.07216477394104004,
-        "frequency": 0.06641509383916855,
-        "count": 176
+        "mean_similarity": 0.19511835277080536,
+        "mean_probability": 0.06567230075597763,
+        "frequency": 0.06129247322678566,
+        "count": 92
       },
       {
         "concept": "a photo of outdoor scenery",
-        "mean_similarity": 0.1909237802028656,
-        "mean_probability": 0.06887783110141754,
-        "frequency": 0.05396226420998573,
-        "count": 143
+        "mean_similarity": 0.18898828327655792,
+        "mean_probability": 0.06256509572267532,
+        "frequency": 0.04863424226641655,
+        "count": 73
       },
       {
         "concept": "a photo of text and a logo",
-        "mean_similarity": 0.19897350668907166,
-        "mean_probability": 0.05332992970943451,
-        "frequency": 0.031698111444711685,
-        "count": 84
+        "mean_similarity": 0.1997939646244049,
+        "mean_probability": 0.05295944958925247,
+        "frequency": 0.029980013146996498,
+        "count": 45
       },
       {
         "concept": "a photo of a child",
-        "mean_similarity": 0.19741027057170868,
-        "mean_probability": 0.048595137894153595,
-        "frequency": 0.030566038563847542,
-        "count": 81
-      },
-      {
-        "concept": "a photo of sports",
-        "mean_similarity": 0.2047017365694046,
-        "mean_probability": 0.05410289764404297,
-        "frequency": 0.027547169476747513,
-        "count": 73
-      },
-      {
-        "concept": "a photo of a man",
-        "mean_similarity": 0.19836194813251495,
-        "mean_probability": 0.045127540826797485,
-        "frequency": 0.027547169476747513,
-        "count": 73
-      },
-      {
-        "concept": "a photo of an illustration or cartoon",
-        "mean_similarity": 0.2079869508743286,
-        "mean_probability": 0.06204940006136894,
-        "frequency": 0.02641509473323822,
-        "count": 70
+        "mean_similarity": 0.19463789463043213,
+        "mean_probability": 0.04412836208939552,
+        "frequency": 0.0279813464730978,
+        "count": 42
       },
       {
         "concept": "a photo of a product on a plain background",
-        "mean_similarity": 0.18971246480941772,
-        "mean_probability": 0.04588394612073898,
-        "frequency": 0.023018868640065193,
-        "count": 61
+        "mean_similarity": 0.19212695956230164,
+        "mean_probability": 0.05214361101388931,
+        "frequency": 0.025982677936553955,
+        "count": 39
       },
       {
-        "concept": "a photo of clothes",
-        "mean_similarity": 0.1968478262424469,
-        "mean_probability": 0.03219986706972122,
-        "frequency": 0.012830188497900963,
-        "count": 34
+        "concept": "a photo of a man",
+        "mean_similarity": 0.19602623581886292,
+        "mean_probability": 0.04160679504275322,
+        "frequency": 0.025316456332802773,
+        "count": 38
       },
       {
-        "concept": "a photo of a car",
-        "mean_similarity": 0.18469807505607605,
-        "mean_probability": 0.017694883048534393,
-        "frequency": 0.012075471691787243,
-        "count": 32
+        "concept": "a photo of sports",
+        "mean_similarity": 0.2032783180475235,
+        "mean_probability": 0.05037160962820053,
+        "frequency": 0.02465023286640644,
+        "count": 37
       },
       {
-        "concept": "a photo of a beach",
-        "mean_similarity": 0.17044150829315186,
-        "mean_probability": 0.014135229401290417,
-        "frequency": 0.011698112823069096,
-        "count": 31
+        "concept": "a photo of an illustration or cartoon",
+        "mean_similarity": 0.20700180530548096,
+        "mean_probability": 0.057242877781391144,
+        "frequency": 0.023317787796258926,
+        "count": 35
       },
       {
         "concept": "a photo of jewellery",
-        "mean_similarity": 0.1917393058538437,
-        "mean_probability": 0.02401265874505043,
-        "frequency": 0.011320754885673523,
-        "count": 30
-      },
-      {
-        "concept": "a photo of cosmetics",
-        "mean_similarity": 0.19404706358909607,
-        "mean_probability": 0.031038746237754822,
-        "frequency": 0.010943396016955376,
-        "count": 29
-      },
-      {
-        "concept": "a photo of a chart or diagram",
-        "mean_similarity": 0.19169588387012482,
-        "mean_probability": 0.01901119016110897,
-        "frequency": 0.010188679210841656,
-        "count": 27
-      },
-      {
-        "concept": "a photo of a person",
-        "mean_similarity": 0.20479130744934082,
-        "mean_probability": 0.058977317065000534,
-        "frequency": 0.009433962404727936,
-        "count": 25
-      },
-      {
-        "concept": "a photo of a smiling woman",
-        "mean_similarity": 0.179042786359787,
-        "mean_probability": 0.015517768450081348,
-        "frequency": 0.007547169923782349,
-        "count": 20
-      },
-      {
-        "concept": "a photo of a mobile phone",
-        "mean_similarity": 0.19751399755477905,
-        "mean_probability": 0.021958857774734497,
-        "frequency": 0.007169811520725489,
-        "count": 19
-      },
-      {
-        "concept": "a photo of a house",
-        "mean_similarity": 0.1816069781780243,
-        "mean_probability": 0.013141713105142117,
-        "frequency": 0.006792452652007341,
+        "mean_similarity": 0.19042152166366577,
+        "mean_probability": 0.023775363340973854,
+        "frequency": 0.011992005631327629,
         "count": 18
       },
       {
-        "concept": "a photo of a drink",
-        "mean_similarity": 0.1909371018409729,
-        "mean_probability": 0.01733279787003994,
-        "frequency": 0.006415094248950481,
+        "concept": "a photo of a car",
+        "mean_similarity": 0.18404246866703033,
+        "mean_probability": 0.017109917476773262,
+        "frequency": 0.011992005631327629,
+        "count": 18
+      },
+      {
+        "concept": "a photo of clothes",
+        "mean_similarity": 0.19556422531604767,
+        "mean_probability": 0.02948683127760887,
+        "frequency": 0.011325783096253872,
         "count": 17
       },
       {
-        "concept": "a photo of a musical instrument",
-        "mean_similarity": 0.19279628992080688,
-        "mean_probability": 0.019867651164531708,
-        "frequency": 0.0052830190397799015,
-        "count": 14
+        "concept": "a photo of a beach",
+        "mean_similarity": 0.16916237771511078,
+        "mean_probability": 0.013084580190479755,
+        "frequency": 0.011325783096253872,
+        "count": 17
       },
       {
-        "concept": "a photo of shoes",
-        "mean_similarity": 0.1849256306886673,
-        "mean_probability": 0.012676564045250416,
-        "frequency": 0.0052830190397799015,
-        "count": 14
+        "concept": "a photo of cosmetics",
+        "mean_similarity": 0.19270730018615723,
+        "mean_probability": 0.02960450015962124,
+        "frequency": 0.010659560561180115,
+        "count": 16
+      },
+      {
+        "concept": "a photo of a chart or diagram",
+        "mean_similarity": 0.19193971157073975,
+        "mean_probability": 0.018470851704478264,
+        "frequency": 0.010659560561180115,
+        "count": 16
+      },
+      {
+        "concept": "a photo of a person",
+        "mean_similarity": 0.20201744139194489,
+        "mean_probability": 0.05231940746307373,
+        "frequency": 0.007994670420885086,
+        "count": 12
+      },
+      {
+        "concept": "a photo of a mobile phone",
+        "mean_similarity": 0.19695799052715302,
+        "mean_probability": 0.022289974614977837,
+        "frequency": 0.007994670420885086,
+        "count": 12
+      },
+      {
+        "concept": "a photo of a smiling woman",
+        "mean_similarity": 0.1771778166294098,
+        "mean_probability": 0.013748209923505783,
+        "frequency": 0.006662225350737572,
+        "count": 10
       },
       {
         "concept": "a photo of furniture",
-        "mean_similarity": 0.1924455314874649,
-        "mean_probability": 0.01870407909154892,
-        "frequency": 0.004905660171061754,
-        "count": 13
+        "mean_similarity": 0.1919362097978592,
+        "mean_probability": 0.018321305513381958,
+        "frequency": 0.0059960028156638145,
+        "count": 9
       },
       {
-        "concept": "a photo of a computer",
-        "mean_similarity": 0.18918108940124512,
-        "mean_probability": 0.01295865885913372,
-        "frequency": 0.0026415095198899508,
+        "concept": "a photo of a musical instrument",
+        "mean_similarity": 0.19135408103466034,
+        "mean_probability": 0.019297590479254723,
+        "frequency": 0.0059960028156638145,
+        "count": 9
+      },
+      {
+        "concept": "a photo of a drink",
+        "mean_similarity": 0.18958164751529694,
+        "mean_probability": 0.016507217660546303,
+        "frequency": 0.0059960028156638145,
+        "count": 9
+      },
+      {
+        "concept": "a photo of a house",
+        "mean_similarity": 0.18015363812446594,
+        "mean_probability": 0.012030922807753086,
+        "frequency": 0.0059960028156638145,
+        "count": 9
+      },
+      {
+        "concept": "a photo of shoes",
+        "mean_similarity": 0.18342243134975433,
+        "mean_probability": 0.011815585196018219,
+        "frequency": 0.0046635577455163,
         "count": 7
       },
       {
+        "concept": "a photo of a computer",
+        "mean_similarity": 0.18917728960514069,
+        "mean_probability": 0.013283919543027878,
+        "frequency": 0.0026648901402950287,
+        "count": 4
+      },
+      {
         "concept": "a photo of a city street",
-        "mean_similarity": 0.16355638206005096,
-        "mean_probability": 0.007465403527021408,
-        "frequency": 0.002264150884002447,
-        "count": 6
+        "mean_similarity": 0.1616150289773941,
+        "mean_probability": 0.0069233933463692665,
+        "frequency": 0.0026648901402950287,
+        "count": 4
       }
     ],
     "anuncio": [
@@ -518,197 +518,197 @@
     "participante": [
       {
         "concept": "a photo of an animal",
-        "mean_similarity": 0.20832262933254242,
-        "mean_probability": 0.10901427268981934,
-        "frequency": 0.09748829156160355,
-        "count": 229
+        "mean_similarity": 0.2083050161600113,
+        "mean_probability": 0.1118476390838623,
+        "frequency": 0.10000000149011612,
+        "count": 120
       },
       {
         "concept": "a photo of food",
-        "mean_similarity": 0.1988430619239807,
-        "mean_probability": 0.08024681359529495,
-        "frequency": 0.07407407462596893,
-        "count": 174
+        "mean_similarity": 0.1983116716146469,
+        "mean_probability": 0.07986437529325485,
+        "frequency": 0.07500000298023224,
+        "count": 90
       },
       {
         "concept": "a photo of outdoor scenery",
-        "mean_similarity": 0.19290095567703247,
-        "mean_probability": 0.07752154022455215,
-        "frequency": 0.06087696924805641,
-        "count": 143
-      },
-      {
-        "concept": "a photo of a child",
-        "mean_similarity": 0.2005823850631714,
-        "mean_probability": 0.054548416286706924,
-        "frequency": 0.03448275849223137,
-        "count": 81
-      },
-      {
-        "concept": "a photo of text and a logo",
-        "mean_similarity": 0.19673915207386017,
-        "mean_probability": 0.052920710295438766,
-        "frequency": 0.03448275849223137,
-        "count": 81
-      },
-      {
-        "concept": "a photo of a man",
-        "mean_similarity": 0.20138253271579742,
-        "mean_probability": 0.05066981911659241,
-        "frequency": 0.031077053397893906,
+        "mean_similarity": 0.1923731416463852,
+        "mean_probability": 0.07790171355009079,
+        "frequency": 0.06083333492279053,
         "count": 73
       },
       {
+        "concept": "a photo of a child",
+        "mean_similarity": 0.2001519352197647,
+        "mean_probability": 0.054661497473716736,
+        "frequency": 0.03500000014901161,
+        "count": 42
+      },
+      {
+        "concept": "a photo of text and a logo",
+        "mean_similarity": 0.19562608003616333,
+        "mean_probability": 0.052065469324588776,
+        "frequency": 0.03500000014901161,
+        "count": 42
+      },
+      {
+        "concept": "a photo of a man",
+        "mean_similarity": 0.20135311782360077,
+        "mean_probability": 0.05157269164919853,
+        "frequency": 0.03166666626930237,
+        "count": 38
+      },
+      {
         "concept": "a photo of sports",
-        "mean_similarity": 0.20641201734542847,
-        "mean_probability": 0.059288762509822845,
-        "frequency": 0.03022562712430954,
-        "count": 71
+        "mean_similarity": 0.20626917481422424,
+        "mean_probability": 0.059587009251117706,
+        "frequency": 0.02916666679084301,
+        "count": 35
       },
       {
         "concept": "a photo of an illustration or cartoon",
-        "mean_similarity": 0.20923465490341187,
-        "mean_probability": 0.06878191232681274,
-        "frequency": 0.029374202713370323,
-        "count": 69
-      },
-      {
-        "concept": "a photo of an online advertisement with a lot of text",
-        "mean_similarity": 0.19944888353347778,
-        "mean_probability": 0.04867511987686157,
-        "frequency": 0.019582800567150116,
-        "count": 46
-      },
-      {
-        "concept": "a photo of a product on a plain background",
-        "mean_similarity": 0.18552103638648987,
-        "mean_probability": 0.03640517592430115,
-        "frequency": 0.017028523609042168,
-        "count": 40
-      },
-      {
-        "concept": "a photo of clothes",
-        "mean_similarity": 0.19796493649482727,
-        "mean_probability": 0.03552001714706421,
-        "frequency": 0.01447424478828907,
+        "mean_similarity": 0.20919710397720337,
+        "mean_probability": 0.06921611726284027,
+        "frequency": 0.028333334252238274,
         "count": 34
       },
       {
-        "concept": "a photo of a car",
-        "mean_similarity": 0.18540233373641968,
-        "mean_probability": 0.018910221755504608,
-        "frequency": 0.013197105377912521,
-        "count": 31
+        "concept": "a photo of an online advertisement with a lot of text",
+        "mean_similarity": 0.19810090959072113,
+        "mean_probability": 0.04533066973090172,
+        "frequency": 0.017500000074505806,
+        "count": 21
       },
       {
-        "concept": "a photo of a beach",
-        "mean_similarity": 0.17172501981258392,
-        "mean_probability": 0.015896281227469444,
-        "frequency": 0.013197105377912521,
-        "count": 31
-      },
-      {
-        "concept": "a photo of cosmetics",
-        "mean_similarity": 0.19563311338424683,
-        "mean_probability": 0.03355591371655464,
-        "frequency": 0.01149425283074379,
-        "count": 27
-      },
-      {
-        "concept": "a photo of a chart or diagram",
-        "mean_similarity": 0.1908530443906784,
-        "mean_probability": 0.020435933023691177,
-        "frequency": 0.01149425283074379,
-        "count": 27
-      },
-      {
-        "concept": "a photo of a person",
-        "mean_similarity": 0.20802342891693115,
-        "mean_probability": 0.06629393994808197,
-        "frequency": 0.010642826557159424,
-        "count": 25
-      },
-      {
-        "concept": "a photo of jewellery",
-        "mean_similarity": 0.1931149959564209,
-        "mean_probability": 0.02459949627518654,
-        "frequency": 0.010642826557159424,
-        "count": 25
-      },
-      {
-        "concept": "a photo of a smiling woman",
-        "mean_similarity": 0.18118058145046234,
-        "mean_probability": 0.017413785681128502,
-        "frequency": 0.008514261804521084,
-        "count": 20
-      },
-      {
-        "concept": "a photo of a house",
-        "mean_similarity": 0.18334700167179108,
-        "mean_probability": 0.014710239134728909,
-        "frequency": 0.007662835065275431,
+        "concept": "a photo of a product on a plain background",
+        "mean_similarity": 0.18452788889408112,
+        "mean_probability": 0.03515906631946564,
+        "frequency": 0.014999999664723873,
         "count": 18
       },
       {
-        "concept": "a photo of a drink",
-        "mean_similarity": 0.19252078235149384,
-        "mean_probability": 0.01898065395653248,
-        "frequency": 0.007237122394144535,
+        "concept": "a photo of clothes",
+        "mean_similarity": 0.19742897152900696,
+        "mean_probability": 0.03530551865696907,
+        "frequency": 0.014166667126119137,
         "count": 17
       },
       {
-        "concept": "a photo of a mobile phone",
-        "mean_similarity": 0.1982591152191162,
-        "mean_probability": 0.022788209840655327,
-        "frequency": 0.006811409257352352,
+        "concept": "a photo of a car",
+        "mean_similarity": 0.18525663018226624,
+        "mean_probability": 0.0193422120064497,
+        "frequency": 0.014166667126119137,
+        "count": 17
+      },
+      {
+        "concept": "a photo of a beach",
+        "mean_similarity": 0.1713540107011795,
+        "mean_probability": 0.016268299892544746,
+        "frequency": 0.014166667126119137,
+        "count": 17
+      },
+      {
+        "concept": "a photo of a chart or diagram",
+        "mean_similarity": 0.19035105407238007,
+        "mean_probability": 0.021124249324202538,
+        "frequency": 0.013333333656191826,
         "count": 16
       },
       {
-        "concept": "a photo of shoes",
-        "mean_similarity": 0.1862124353647232,
-        "mean_probability": 0.013374538160860538,
-        "frequency": 0.005534269846975803,
+        "concept": "a photo of cosmetics",
+        "mean_similarity": 0.19547587633132935,
+        "mean_probability": 0.03417211025953293,
+        "frequency": 0.011666666716337204,
+        "count": 14
+      },
+      {
+        "concept": "a photo of jewellery",
+        "mean_similarity": 0.1927838921546936,
+        "mean_probability": 0.024864578619599342,
+        "frequency": 0.010833333246409893,
         "count": 13
       },
       {
-        "concept": "a photo of a musical instrument",
-        "mean_similarity": 0.19404222071170807,
-        "mean_probability": 0.02019405923783779,
-        "frequency": 0.004257130902260542,
+        "concept": "a photo of a person",
+        "mean_similarity": 0.20764857530593872,
+        "mean_probability": 0.0649716705083847,
+        "frequency": 0.009999999776482582,
+        "count": 12
+      },
+      {
+        "concept": "a photo of a smiling woman",
+        "mean_similarity": 0.18089476227760315,
+        "mean_probability": 0.017015798017382622,
+        "frequency": 0.008333333767950535,
         "count": 10
+      },
+      {
+        "concept": "a photo of a mobile phone",
+        "mean_similarity": 0.1982770562171936,
+        "mean_probability": 0.02399647980928421,
+        "frequency": 0.007499999832361937,
+        "count": 9
+      },
+      {
+        "concept": "a photo of a drink",
+        "mean_similarity": 0.19234171509742737,
+        "mean_probability": 0.019525811076164246,
+        "frequency": 0.007499999832361937,
+        "count": 9
+      },
+      {
+        "concept": "a photo of a house",
+        "mean_similarity": 0.18319521844387054,
+        "mean_probability": 0.014822692610323429,
+        "frequency": 0.007499999832361937,
+        "count": 9
       },
       {
         "concept": "a photo of furniture",
-        "mean_similarity": 0.19230185449123383,
-        "mean_probability": 0.01856028288602829,
-        "frequency": 0.004257130902260542,
-        "count": 10
+        "mean_similarity": 0.19152720272541046,
+        "mean_probability": 0.017943808808922768,
+        "frequency": 0.004999999888241291,
+        "count": 6
       },
       {
-        "concept": "a photo of a computer",
-        "mean_similarity": 0.18860825896263123,
-        "mean_probability": 0.012281639501452446,
-        "frequency": 0.0025542783550918102,
+        "concept": "a photo of shoes",
+        "mean_similarity": 0.1855643391609192,
+        "mean_probability": 0.012965907342731953,
+        "frequency": 0.004999999888241291,
         "count": 6
+      },
+      {
+        "concept": "a photo of a musical instrument",
+        "mean_similarity": 0.19343121349811554,
+        "mean_probability": 0.019793538376688957,
+        "frequency": 0.004166666883975267,
+        "count": 5
       },
       {
         "concept": "a photo of a city street",
-        "mean_similarity": 0.16639545559883118,
-        "mean_probability": 0.008412228897213936,
-        "frequency": 0.0025542783550918102,
-        "count": 6
+        "mean_similarity": 0.16668550670146942,
+        "mean_probability": 0.008640849962830544,
+        "frequency": 0.0033333334140479565,
+        "count": 4
+      },
+      {
+        "concept": "a photo of a computer",
+        "mean_similarity": 0.18805503845214844,
+        "mean_probability": 0.012040238827466965,
+        "frequency": 0.0024999999441206455,
+        "count": 3
       }
     ]
   },
   "top_examples": {
     "a photo of an online advertisement with a lot of text": {
       "indices": [
-        1313,
-        1380,
-        1420,
+        774,
+        841,
+        881,
         100,
-        1298,
-        1297
+        759,
+        758
       ],
       "scores": [
         0.2981,
@@ -729,20 +729,20 @@
     },
     "a photo of an animal": {
       "indices": [
-        1257,
-        1152,
-        1256,
-        306,
-        1071,
-        939
+        682,
+        734,
+        242,
+        641,
+        575,
+        241
       ],
       "scores": [
-        0.2861,
         0.2856,
         0.2837,
         0.2823,
-        0.2822,
-        0.2809
+        0.28,
+        0.2799,
+        0.2797
       ],
       "sources": [
         "participante",
@@ -755,20 +755,20 @@
     },
     "a photo of food": {
       "indices": [
-        1543,
-        2122,
-        1542,
-        2123,
-        2439,
-        2438
+        1242,
+        952,
+        1395,
+        687,
+        223,
+        162
       ],
       "scores": [
-        0.2787,
         0.2772,
         0.2765,
-        0.2752,
-        0.2744,
-        0.2743
+        0.2743,
+        0.2724,
+        0.2709,
+        0.2705
       ],
       "sources": [
         "participante",
@@ -781,20 +781,20 @@
     },
     "a photo of outdoor scenery": {
       "indices": [
-        446,
-        447,
-        1570,
-        383,
-        1571,
-        384
+        320,
+        966,
+        288,
+        989,
+        943,
+        987
       ],
       "scores": [
         0.2845,
-        0.2833,
         0.2802,
         0.2801,
-        0.28,
-        0.2785
+        0.2778,
+        0.276,
+        0.2719
       ],
       "sources": [
         "participante",
@@ -807,27 +807,27 @@
     },
     "a photo of text and a logo": {
       "indices": [
-        1482,
-        1483,
-        1592,
-        1167,
+        922,
+        977,
         98,
-        1166
+        689,
+        675,
+        323
       ],
       "scores": [
         0.2755,
-        0.2755,
         0.2726,
-        0.2719,
         0.2709,
-        0.2683
+        0.2683,
+        0.266,
+        0.2654
       ],
       "sources": [
         "participante",
         "participante",
-        "participante",
-        "participante",
         "anuncio",
+        "participante",
+        "participante",
         "participante"
       ]
     }
@@ -837,34 +837,34 @@
       "text": "a car",
       "results": [
         {
-          "index": 189,
-          "score": 0.3019,
-          "source": "participante",
-          "file": "2_th_1445288697.png"
-        },
-        {
-          "index": 188,
+          "index": 177,
           "score": 0.3011,
           "source": "participante",
           "file": "2.png"
         },
         {
-          "index": 1623,
-          "score": 0.2635,
-          "source": "participante",
-          "file": "2_th_1457285027.png"
-        },
-        {
-          "index": 386,
+          "index": 290,
           "score": 0.2608,
           "source": "participante",
           "file": "5.png"
         },
         {
-          "index": 387,
+          "index": 992,
           "score": 0.2605,
           "source": "participante",
-          "file": "5_th_1445469178.png"
+          "file": "2.png"
+        },
+        {
+          "index": 280,
+          "score": 0.2591,
+          "source": "participante",
+          "file": "5.png"
+        },
+        {
+          "index": 39,
+          "score": 0.2558,
+          "source": "anuncio",
+          "file": "3.png"
         }
       ]
     },
@@ -872,34 +872,34 @@
       "text": "a red sports car on a road",
       "results": [
         {
-          "index": 2163,
-          "score": 0.2464,
-          "source": "participante",
-          "file": "3_th_1458259405.png"
-        },
-        {
-          "index": 252,
-          "score": 0.2458,
-          "source": "participante",
-          "file": "4_th_1445386299.png"
-        },
-        {
-          "index": 251,
+          "index": 209,
           "score": 0.2453,
           "source": "participante",
           "file": "4.png"
         },
         {
-          "index": 962,
+          "index": 587,
           "score": 0.2374,
           "source": "participante",
           "file": "3.png"
         },
         {
-          "index": 963,
-          "score": 0.2366,
+          "index": 177,
+          "score": 0.2362,
           "source": "participante",
-          "file": "3_th_1446593216.png"
+          "file": "2.png"
+        },
+        {
+          "index": 1397,
+          "score": 0.2361,
+          "source": "participante",
+          "file": "1.png"
+        },
+        {
+          "index": 1262,
+          "score": 0.2349,
+          "source": "participante",
+          "file": "3.png"
         }
       ]
     },
@@ -907,34 +907,34 @@
       "text": "a happy family at home",
       "results": [
         {
-          "index": 936,
+          "index": 574,
           "score": 0.2765,
           "source": "participante",
           "file": "5.png"
         },
         {
-          "index": 937,
-          "score": 0.2741,
-          "source": "participante",
-          "file": "5_th_1446475425.png"
-        },
-        {
-          "index": 2037,
-          "score": 0.2711,
-          "source": "participante",
-          "file": "4_th_1458238283.png"
-        },
-        {
-          "index": 2036,
+          "index": 1199,
           "score": 0.2707,
           "source": "participante",
           "file": "4.png"
         },
         {
-          "index": 953,
-          "score": 0.2605,
+          "index": 582,
+          "score": 0.2602,
           "source": "participante",
-          "file": "3_th_1446514139.png"
+          "file": "3.png"
+        },
+        {
+          "index": 1150,
+          "score": 0.2538,
+          "source": "participante",
+          "file": "5.png"
+        },
+        {
+          "index": 414,
+          "score": 0.2515,
+          "source": "participante",
+          "file": "1.png"
         }
       ]
     },
@@ -942,34 +942,34 @@
       "text": "luxury",
       "results": [
         {
-          "index": 252,
-          "score": 0.2556,
-          "source": "participante",
-          "file": "4_th_1445386299.png"
-        },
-        {
-          "index": 251,
+          "index": 209,
           "score": 0.2553,
           "source": "participante",
           "file": "4.png"
         },
         {
-          "index": 1622,
+          "index": 992,
           "score": 0.2534,
           "source": "participante",
           "file": "2.png"
         },
         {
-          "index": 1363,
+          "index": 824,
           "score": 0.2511,
           "source": "anuncio",
           "file": "8.png"
         },
         {
-          "index": 1798,
+          "index": 1080,
           "score": 0.2483,
           "source": "participante",
           "file": "5.png"
+        },
+        {
+          "index": 819,
+          "score": 0.2472,
+          "source": "anuncio",
+          "file": "3.png"
         }
       ]
     },
@@ -977,34 +977,34 @@
       "text": "freedom",
       "results": [
         {
-          "index": 1558,
+          "index": 960,
           "score": 0.2764,
           "source": "participante",
           "file": "5.png"
         },
         {
-          "index": 1559,
-          "score": 0.2666,
-          "source": "participante",
-          "file": "5_th_1457187433.png"
-        },
-        {
-          "index": 819,
+          "index": 515,
           "score": 0.2578,
           "source": "participante",
           "file": "1.png"
         },
         {
-          "index": 820,
-          "score": 0.2555,
+          "index": 1247,
+          "score": 0.2542,
           "source": "participante",
-          "file": "1_th_1446029649.png"
+          "file": "2.png"
         },
         {
-          "index": 2133,
-          "score": 0.2543,
+          "index": 1334,
+          "score": 0.2497,
           "source": "participante",
-          "file": "2_th_1458257347.png"
+          "file": "3.png"
+        },
+        {
+          "index": 267,
+          "score": 0.2483,
+          "source": "participante",
+          "file": "2.png"
         }
       ]
     },
@@ -1012,34 +1012,34 @@
       "text": "something healthy to eat",
       "results": [
         {
-          "index": 1652,
+          "index": 1007,
           "score": 0.283,
           "source": "participante",
           "file": "2.png"
         },
         {
-          "index": 1653,
-          "score": 0.2805,
-          "source": "participante",
-          "file": "2_th_1457306064.png"
-        },
-        {
-          "index": 2488,
+          "index": 1420,
           "score": 0.2786,
           "source": "participante",
           "file": "4.png"
         },
         {
-          "index": 2489,
-          "score": 0.2785,
-          "source": "participante",
-          "file": "4_th_1459036354.png"
-        },
-        {
-          "index": 1874,
+          "index": 1118,
           "score": 0.2582,
           "source": "participante",
           "file": "4.png"
+        },
+        {
+          "index": 494,
+          "score": 0.2574,
+          "source": "participante",
+          "file": "5.png"
+        },
+        {
+          "index": 1033,
+          "score": 0.2568,
+          "source": "participante",
+          "file": "3.png"
         }
       ]
     },
@@ -1053,28 +1053,28 @@
           "file": "5.png"
         },
         {
-          "index": 2027,
-          "score": 0.2535,
-          "source": "participante",
-          "file": "4_th_1458238569.png"
-        },
-        {
-          "index": 2026,
+          "index": 1194,
           "score": 0.2533,
           "source": "participante",
           "file": "4.png"
         },
         {
-          "index": 1430,
+          "index": 891,
           "score": 0.2513,
           "source": "anuncio",
           "file": "14.png"
         },
         {
-          "index": 496,
-          "score": 0.251,
+          "index": 347,
+          "score": 0.2502,
           "source": "participante",
-          "file": "2_th_1445540887.png"
+          "file": "2.png"
+        },
+        {
+          "index": 417,
+          "score": 0.25,
+          "source": "participante",
+          "file": "4.png"
         }
       ]
     },
@@ -1082,19 +1082,19 @@
       "text": "an advertisement with a lot of text",
       "results": [
         {
-          "index": 1431,
+          "index": 892,
           "score": 0.2819,
           "source": "anuncio",
           "file": "15.png"
         },
         {
-          "index": 1313,
+          "index": 774,
           "score": 0.278,
           "source": "anuncio",
           "file": "3.png"
         },
         {
-          "index": 1310,
+          "index": 771,
           "score": 0.2714,
           "source": "anuncio",
           "file": "14.png"
@@ -1106,7 +1106,7 @@
           "file": "11.png"
         },
         {
-          "index": 1432,
+          "index": 893,
           "score": 0.269,
           "source": "anuncio",
           "file": "2.png"
@@ -1117,34 +1117,34 @@
       "text": "loneliness",
       "results": [
         {
-          "index": 2593,
-          "score": 0.281,
-          "source": "participante",
-          "file": "4_th_1459135581.png"
-        },
-        {
-          "index": 2592,
+          "index": 1472,
           "score": 0.2806,
           "source": "participante",
           "file": "4.png"
         },
         {
-          "index": 696,
-          "score": 0.2598,
-          "source": "participante",
-          "file": "4_th_1446029920.png"
-        },
-        {
-          "index": 695,
+          "index": 447,
           "score": 0.2591,
           "source": "participante",
           "file": "4.png"
         },
         {
-          "index": 688,
-          "score": 0.2555,
+          "index": 443,
+          "score": 0.2535,
           "source": "participante",
-          "file": "5_th_1446030593.png"
+          "file": "5.png"
+        },
+        {
+          "index": 199,
+          "score": 0.2532,
+          "source": "participante",
+          "file": "4.png"
+        },
+        {
+          "index": 515,
+          "score": 0.2487,
+          "source": "participante",
+          "file": "1.png"
         }
       ]
     },
@@ -1152,34 +1152,34 @@
       "text": "um cachorro brincando na praia",
       "results": [
         {
-          "index": 1804,
+          "index": 1083,
           "score": 0.2749,
           "source": "participante",
           "file": "3.png"
         },
         {
-          "index": 1805,
-          "score": 0.2715,
-          "source": "participante",
-          "file": "3_th_1457554427.png"
-        },
-        {
-          "index": 1963,
-          "score": 0.2531,
-          "source": "participante",
-          "file": "2_th_1457697463.png"
-        },
-        {
-          "index": 1962,
+          "index": 1162,
           "score": 0.253,
           "source": "participante",
           "file": "2.png"
         },
         {
-          "index": 409,
-          "score": 0.2491,
+          "index": 1047,
+          "score": 0.2483,
           "source": "participante",
-          "file": "1_th_1445482580.png"
+          "file": "2.png"
+        },
+        {
+          "index": 301,
+          "score": 0.2481,
+          "source": "participante",
+          "file": "1.png"
+        },
+        {
+          "index": 920,
+          "score": 0.2443,
+          "source": "participante",
+          "file": "5.png"
         }
       ]
     },
@@ -1187,34 +1187,34 @@
       "text": "uma pessoa sorrindo",
       "results": [
         {
-          "index": 2263,
-          "score": 0.2896,
-          "source": "participante",
-          "file": "1_th_1458481455.png"
-        },
-        {
-          "index": 2262,
+          "index": 1312,
           "score": 0.2838,
           "source": "participante",
           "file": "1.png"
         },
         {
-          "index": 2639,
-          "score": 0.2588,
-          "source": "participante",
-          "file": "5_th_1459275860.png"
-        },
-        {
-          "index": 2638,
+          "index": 1495,
           "score": 0.2571,
           "source": "participante",
           "file": "5.png"
         },
         {
-          "index": 1787,
-          "score": 0.255,
+          "index": 1074,
+          "score": 0.2537,
           "source": "participante",
-          "file": "4_th_1457550921.png"
+          "file": "4.png"
+        },
+        {
+          "index": 974,
+          "score": 0.2455,
+          "source": "participante",
+          "file": "4.png"
+        },
+        {
+          "index": 399,
+          "score": 0.2416,
+          "source": "participante",
+          "file": "1.png"
         }
       ]
     }
@@ -1770,12 +1770,12 @@
       }
     ]
   },
-  "embedding_seconds": 49.6,
+  "embedding_seconds": 37.0,
   "step_seconds": {
-    "download": 20.7,
-    "listagem": 27.9,
-    "carregar CLIP": 16.7,
-    "embeddings das imagens": 49.6,
+    "download": 23.5,
+    "listagem": 53.7,
+    "carregar CLIP": 18.6,
+    "embeddings das imagens": 37.0,
     "embeddings dos textos": 0.3,
     "busca 1": 0.0,
     "busca 2": 0.0,
@@ -1788,12 +1788,12 @@
     "busca 9": 0.0,
     "busca 10": 0.0,
     "busca 11": 0.0,
-    "tokenização": 0.9
+    "tokenização": 1.5
   },
   "model": "openai/clip-vit-base-patch32",
   "logit_scale": 100.0,
   "seed": 42,
-  "runtime_seconds": 143.5,
+  "runtime_seconds": 164.5,
   "peak_gpu_memory_mb": 812.2,
-  "peak_ram_mb": 2216.0
+  "peak_ram_mb": 2265.3
 }
