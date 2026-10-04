@@ -1,6 +1,8 @@
 """Tests for the report builder."""
 
 import logging
+import re
+from pathlib import Path
 
 from PIL import Image
 from pypdf import PdfReader
@@ -8,6 +10,7 @@ from pypdf import PdfReader
 from build_report import (
     FULL_WIDTH,
     SINGLE_WIDTH,
+    PRINT_DPI,
     build,
     figure_size,
     merge_sections,
@@ -102,3 +105,54 @@ def test_build_prints_no_warning_and_keeps_accents_and_table_text(tmp_path, capl
     assert "Relatório" in text
     assert "Acurácia de validação" in text
     assert "Acurácia" in text and "0,98" in text
+
+
+def embedded_sources(html):
+    """Returns the image paths written in the ``src`` attributes of an HTML page."""
+    return re.findall(r'<img [^>]*src="([^"]+)"', html)
+
+
+def test_large_images_are_embedded_smaller_than_their_source(tmp_path):
+    """A figure much larger than its printed size is replaced by a downscaled copy in the build folder."""
+    sections = make_report(tmp_path, image_size=(3000, 1000))
+    build_dir = tmp_path / "build"
+    html = render_html(sections, build_dir=build_dir)
+    (source,) = embedded_sources(html)
+    assert Path(source).parent == build_dir.resolve()
+    with Image.open(source) as copy:
+        assert copy.width <= round(FULL_WIDTH * PRINT_DPI / 72)
+        assert copy.width < 3000
+        assert abs(copy.width / copy.height - 3) < 0.05
+
+
+def test_small_images_are_not_upscaled(tmp_path):
+    """A figure already below the print resolution keeps its pixels."""
+    sections = make_report(tmp_path, image_size=(300, 200))
+    html = render_html(sections, build_dir=tmp_path / "build")
+    (source,) = embedded_sources(html)
+    with Image.open(source) as copy:
+        assert copy.size == (300, 200)
+
+
+def test_source_images_are_left_untouched(tmp_path):
+    """Downscaling never rewrites the file under report/figures."""
+    sections = make_report(tmp_path, image_size=(3000, 1000))
+    figure = tmp_path / "report" / "figures" / "f.png"
+    before = figure.read_bytes()
+    render_html(sections, build_dir=tmp_path / "build")
+    assert figure.read_bytes() == before
+
+
+def test_photographs_are_embedded_as_jpeg_and_flat_charts_stay_png(tmp_path):
+    """Images with many colours become JPEG copies; flat-colour charts keep lossless PNG."""
+    from numpy.random import default_rng
+
+    sections = make_report(tmp_path, image_size=(3000, 1000))
+    figure = tmp_path / "report" / "figures" / "f.png"
+    noise = default_rng(0).integers(0, 256, (1000, 3000, 3), dtype="uint8")
+    Image.fromarray(noise).save(figure)
+    (photo,) = embedded_sources(render_html(sections, build_dir=tmp_path / "b1"))
+    assert photo.endswith(".jpg")
+    Image.new("RGB", (3000, 1000), (10, 20, 30)).save(figure)
+    (chart,) = embedded_sources(render_html(sections, build_dir=tmp_path / "b2"))
+    assert chart.endswith(".png")

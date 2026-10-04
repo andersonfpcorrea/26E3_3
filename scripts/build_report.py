@@ -11,10 +11,14 @@ figure (single charts, confusion matrices) takes two thirds of it. A figure
 taller than the page limit shrinks until it fits. To override the rule, write
 the width in points after the image in the Markdown line, for example
 ``![caption](figures/a.png){: width="499"}``; the height still follows the
-file's ratio. Headings are kept on the same page as the block that follows.
+file's ratio. Each image is embedded at about ``PRINT_DPI`` dots per inch at its
+displayed width, using a downscaled copy written to the build folder; the files
+under ``report`` are never modified and small images are never upscaled.
+Headings are kept on the same page as the block that follows.
 """
 
 import re
+from hashlib import sha1
 from pathlib import Path
 
 from markdown import markdown
@@ -31,6 +35,9 @@ FULL_WIDTH = 499
 SINGLE_WIDTH = 333
 MAX_HEIGHT = 700
 STRIP_RATIO = 2.4
+PRINT_DPI = 150
+PHOTO_COLORS = 4000
+JPEG_QUALITY = 85
 
 CSS = """
 @page { size: a4 portrait; margin: 1.7cm; }
@@ -73,19 +80,61 @@ def figure_size(
     return width, round(width / ratio)
 
 
-def size_images(html: str, base_dir: Path) -> str:
-    """Gives every image tag a width and height from its file, honouring a width already set."""
+def is_photographic(image: Image.Image) -> bool:
+    """Tells photos, which compress well as JPEG, from charts and diagrams, which stay lossless.
+
+    An image with more than ``PHOTO_COLORS`` distinct colours counts as photographic.
+    """
+    return len(image.convert("RGB").getcolors(maxcolors=PHOTO_COLORS) or ()) == 0
+
+
+def embedded_copy(source: str, width_points: int, build_dir: Path) -> str:
+    """Returns the path of the image to embed at ``width_points`` wide on the page.
+
+    When the file has more pixels than ``PRINT_DPI`` needs at that width, a
+    downscaled copy is written to ``build_dir`` and its path is returned.
+    Otherwise the source path is returned unchanged. URLs pass through.
+    """
+    if source.startswith(("http://", "https://", "data:")):
+        return source
+    target = round(width_points * PRINT_DPI / 72)
+    with Image.open(source) as image:
+        if image.width <= target:
+            return source
+        height = max(1, round(image.height * target / image.width))
+        resized = image.convert("RGBA" if image.mode in ("RGBA", "LA", "P") else "RGB").resize(
+            (target, height), Image.LANCZOS
+        )
+    build_dir = Path(build_dir)
+    build_dir.mkdir(parents=True, exist_ok=True)
+    name = f"{sha1(source.encode()).hexdigest()[:12]}_{Path(source).stem}"
+    if is_photographic(resized):
+        copy = build_dir / f"{name}.jpg"
+        resized.convert("RGB").save(copy, quality=JPEG_QUALITY, optimize=True)
+    else:
+        copy = build_dir / f"{name}.png"
+        resized.save(copy, optimize=True)
+    return str(copy.resolve())
+
+
+def size_images(html: str, base_dir: Path, build_dir: Path) -> str:
+    """Gives every image tag a width and height from its file and points it at a print-resolution copy.
+
+    A width already set on the tag is honoured.
+    """
 
     def sized(match: re.Match) -> str:
         """Rewrites one image tag."""
         tag = match.group(0)
-        source = re.search(r'src="([^"]+)"', tag).group(1)
+        source = resolve_link(re.search(r'src="([^"]+)"', tag).group(1), base_dir)
         explicit = re.search(r'width="(\d+)"', tag)
         tag = re.sub(r'\s(width|height)="[^"]*"', "", tag)
-        with Image.open(resolve_link(source, base_dir)) as image:
+        with Image.open(source) as image:
             width, height = figure_size(
                 image.width, image.height, int(explicit.group(1)) if explicit else None
             )
+        embedded = embedded_copy(source, width, build_dir)
+        tag = re.sub(r'src="[^"]+"', f'src="{embedded}"', tag)
         return tag.replace("<img ", f'<img width="{width}" height="{height}" ', 1)
 
     return re.sub(r"<img [^>]*>", sized, html)
@@ -100,17 +149,26 @@ def merge_sections(sections_dir: Path) -> str:
     return "\n\n---\n\n".join(parts) + "\n"
 
 
-def render_html(sections_dir: Path) -> str:
+def default_build_dir(sections_dir: Path) -> Path:
+    """Returns the folder for downscaled copies: ``build/images`` beside the report folder."""
+    return Path(sections_dir).resolve().parent.parent / "build" / "images"
+
+
+def render_html(sections_dir: Path, build_dir: Path | None = None) -> str:
     """Renders the merged sections into one HTML page, with images sized from their files.
 
     Image paths in the sections are relative to the parent of ``sections_dir``.
+    Downscaled copies go to ``build_dir``, by default ``build/images`` at the repository root.
     """
     sections_dir = Path(sections_dir)
+    build_dir = Path(build_dir) if build_dir else default_build_dir(sections_dir)
     body = markdown(
         merge_sections(sections_dir),
         extensions=["tables", "fenced_code", "sane_lists", "attr_list"],
     )
-    body = size_images(body.replace("<table>", '<table cellspacing="0">'), sections_dir.parent)
+    body = size_images(
+        body.replace("<table>", '<table cellspacing="0">'), sections_dir.parent, build_dir
+    )
     return (
         "<html><head><meta charset='utf-8'>"
         f"<style>{CSS}</style></head><body>{body}</body></html>"
@@ -121,7 +179,8 @@ def build(sections_dir: Path, output_pdf: Path) -> None:
     """Renders the merged sections into one PDF file."""
     html = render_html(sections_dir)
     report_dir = Path(sections_dir).resolve().parent
-    with open(output_pdf, "wb") as handle, use_policy(ResourceAccessPolicy(base_dir=report_dir)):
+    allowed_dir = report_dir.parent
+    with open(output_pdf, "wb") as handle, use_policy(ResourceAccessPolicy(base_dir=allowed_dir)):
         result = pisa.CreatePDF(
             html,
             dest=handle,
