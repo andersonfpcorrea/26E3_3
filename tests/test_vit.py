@@ -100,14 +100,19 @@ def test_with_positional_embedding_patch_order_matters():
     """Shuffling the patches changes the logits when positions are encoded."""
     torch.manual_seed(0)
     model = small_vit(use_positional_embedding=True)
-    with torch.no_grad():
-        model.positional_embedding.normal_(std=1.0)
     images = torch.randn(2, 3, 64, 64)
     permutation = torch.randperm(64)
     with torch.no_grad():
         original = model(images)
         shuffled = model(shuffle_patches(images, 8, permutation))
-    assert not torch.allclose(original, shuffled, atol=1e-5)
+    assert (original - shuffled).abs().max() > 1e-4
+
+
+def test_class_token_attention_reads_the_class_token_row():
+    """The map is the class token's row of the weights, not the column other tokens aim at it."""
+    attention = torch.arange(2 * 3 * 65 * 65.0).reshape(2, 3, 65, 65)
+    maps = class_token_attention(attention, 8)
+    assert torch.equal(maps.flatten(2), attention[:, :, 0, 1:])
 
 
 def test_class_token_attention_shape_and_mass():

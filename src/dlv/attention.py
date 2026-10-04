@@ -53,7 +53,7 @@ class MultiHeadAttention(nn.Module):
         self.output_projection = nn.Linear(embed_dim, embed_dim)
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x: Tensor, return_weights: bool = False):
+    def forward(self, x: Tensor, return_weights: bool = False) -> Tensor | tuple[Tensor, Tensor]:
         """Attends over the tokens of x shaped (batch, tokens, embed_dim).
 
         Returns the output, or (output, weights) with weights shaped
@@ -88,7 +88,7 @@ class TransformerEncoderBlock(nn.Module):
             nn.Dropout(dropout),
         )
 
-    def forward(self, x: Tensor, return_weights: bool = False):
+    def forward(self, x: Tensor, return_weights: bool = False) -> Tensor | tuple[Tensor, Tensor]:
         """Applies the block to x shaped (batch, tokens, embed_dim).
 
         Returns the output, or (output, weights) when return_weights is true.

@@ -56,12 +56,15 @@ def test_fully_masked_row_gives_zeros_without_nan():
 
 def test_fully_masked_row_keeps_gradients_finite():
     """Backpropagating through a fully masked row produces no NaN gradient."""
+    torch.manual_seed(0)
     query = torch.randn(1, 2, 4, requires_grad=True)
-    key, value = torch.randn(1, 3, 4), torch.randn(1, 3, 4)
+    key = torch.randn(1, 3, 4, requires_grad=True)
+    value = torch.randn(1, 3, 4, requires_grad=True)
     mask = torch.tensor([[[True, True, True], [False, False, False]]])
     output, _ = scaled_dot_product_attention(query, key, value, mask)
     output.sum().backward()
-    assert torch.isfinite(query.grad).all()
+    for tensor in (query, key, value):
+        assert torch.isfinite(tensor.grad).all()
 
 
 def test_identical_keys_give_uniform_weights():
@@ -137,10 +140,18 @@ def test_encoder_block_is_identity_when_final_projections_are_zero():
 
 
 def test_gradients_reach_every_parameter():
-    """Every parameter of the block receives a finite gradient."""
+    """Every parameter receives a non-zero gradient, except the key biases.
+
+    The key projection biases add the same constant to every score of a row,
+    and softmax is invariant to that, so their gradient is mathematically zero.
+    They are only checked to be finite.
+    """
     torch.manual_seed(0)
     block = TransformerEncoderBlock(embed_dim=12, num_heads=3, mlp_dim=24)
     block(torch.randn(2, 5, 12)).sum().backward()
     for name, parameter in block.named_parameters():
         assert parameter.grad is not None, name
         assert torch.isfinite(parameter.grad).all(), name
+        if name.startswith("attention.key.") and name.endswith(".bias"):
+            continue
+        assert parameter.grad.abs().max() > 0, name

@@ -34,7 +34,11 @@ class PatchEmbedding(nn.Module):
 
 
 class VisionTransformer(nn.Module):
-    """Vision Transformer classifier reading the class token after a stack of encoder blocks."""
+    """Vision Transformer classifier reading the class token after a stack of encoder blocks.
+
+    Self-attention treats its input tokens as a set, so the order of the
+    patches reaches the model only through the positional embedding.
+    """
 
     def __init__(
         self,
@@ -67,7 +71,9 @@ class VisionTransformer(nn.Module):
         self.norm = nn.LayerNorm(embed_dim)
         self.head = nn.Linear(embed_dim, num_classes)
 
-    def forward(self, images: Tensor, return_attention: bool = False):
+    def forward(
+        self, images: Tensor, return_attention: bool = False
+    ) -> Tensor | tuple[Tensor, list[Tensor]]:
         """Classifies images shaped (batch, 3, size, size).
 
         Returns logits, or (logits, attention) where attention lists one
