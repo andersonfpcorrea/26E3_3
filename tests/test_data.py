@@ -16,12 +16,16 @@ from dlv.data import (
     IMAGENET_MEAN,
     IMAGENET_STD,
     ImageListDataset,
+    TensorBatches,
+    channel_statistics,
     count_image_files,
     download_kaggle_dataset,
     imagenet_transform,
     list_image_folder,
+    random_crop_flip,
     stratified_split,
 )
+from dlv.engine import evaluate, fit
 
 
 def make_image_tree(root, classes=("bike", "car"), per_class=10):
@@ -256,3 +260,135 @@ def test_count_image_files_counts_visible_files_with_image_suffixes(tmp_path):
 def test_count_image_files_is_zero_for_a_missing_folder(tmp_path):
     """A folder that does not exist holds no images."""
     assert count_image_files(tmp_path / "missing") == 0
+
+
+def numbered_images(count=6, size=8):
+    """Returns uint8 images whose pixels all differ, so any move is visible."""
+    return torch.arange(count * 3 * size * size).remainder(251).to(torch.uint8).reshape(count, 3, size, size)
+
+
+def test_random_crop_flip_keeps_shape_and_dtype():
+    """The augmented batch has the shape and type of the input."""
+    images = numbered_images()
+    augmented = random_crop_flip(images, padding=2, generator=torch.Generator().manual_seed(0))
+    assert augmented.shape == images.shape
+    assert augmented.dtype == torch.uint8
+
+
+def test_random_crop_flip_without_padding_only_mirrors():
+    """With no padding every image comes back as itself or as its mirror."""
+    images = numbered_images(count=40)
+    augmented = random_crop_flip(images, padding=0, generator=torch.Generator().manual_seed(0))
+    same = [torch.equal(new, old) for new, old in zip(augmented, images)]
+    mirrored = [torch.equal(new, old.flip(-1)) for new, old in zip(augmented, images)]
+    assert all(a or b for a, b in zip(same, mirrored))
+    assert any(same) and any(mirrored)
+
+
+def test_random_crop_flip_shifts_by_at_most_the_padding():
+    """Each output is a window of the zero-padded image or of its mirror."""
+    images = numbered_images(count=30)
+    padding = 2
+    augmented = random_crop_flip(images, padding=padding, generator=torch.Generator().manual_seed(1))
+    padded = torch.nn.functional.pad(images, (padding,) * 4)
+    size = images.shape[-1]
+    offsets = set()
+    for index, new in enumerate(augmented):
+        matches = [
+            (top, left)
+            for top in range(2 * padding + 1)
+            for left in range(2 * padding + 1)
+            for source in (padded[index], padded[index].flip(-1))
+            if torch.equal(new, source[:, top : top + size, left : left + size])
+        ]
+        assert matches
+        offsets.add(matches[0])
+    assert len(offsets) > 5
+
+
+def test_random_crop_flip_is_fixed_by_the_generator():
+    """The same generator seed gives the same augmented batch."""
+    images = numbered_images()
+    first = random_crop_flip(images, padding=2, generator=torch.Generator().manual_seed(3))
+    second = random_crop_flip(images, padding=2, generator=torch.Generator().manual_seed(3))
+    assert torch.equal(first, second)
+
+
+def test_channel_statistics_gives_mean_and_std_on_the_unit_scale():
+    """Mean and standard deviation are per channel, with pixels scaled to 0..1."""
+    images = torch.zeros(2, 3, 4, 4, dtype=torch.uint8)
+    images[:, 0] = 255
+    images[0, 1] = 255
+    mean, std = channel_statistics(images)
+    assert mean == pytest.approx((1.0, 0.5, 0.0))
+    assert std == pytest.approx((0.0, 0.5, 0.0))
+
+
+def test_tensor_batches_serves_every_sample_normalized_and_in_order():
+    """Without shuffling, batches follow the stored order and are normalized floats."""
+    images = numbered_images(count=5)
+    labels = torch.arange(5)
+    batches = TensorBatches(images, labels, batch_size=2, mean=(0.5, 0.5, 0.5), std=(0.25, 0.25, 0.25))
+    served = list(batches)
+    assert len(batches) == 3
+    assert [batch_images.shape[0] for batch_images, _ in served] == [2, 2, 1]
+    assert torch.equal(torch.cat([batch_labels for _, batch_labels in served]), labels)
+    expected = (images.float() / 255 - 0.5) / 0.25
+    assert torch.allclose(torch.cat([batch_images for batch_images, _ in served]), expected)
+    assert served[0][0].dtype == torch.float32
+
+
+def test_tensor_batches_shuffles_differently_each_epoch_but_keeps_pairs():
+    """Shuffled epochs differ in order while every image keeps its label."""
+    images = torch.arange(20, dtype=torch.uint8).reshape(20, 1, 1, 1).expand(20, 3, 2, 2).contiguous()
+    labels = torch.arange(20)
+    batches = TensorBatches(images, labels, batch_size=4, mean=(0.0,) * 3, std=(1.0,) * 3, shuffle=True, seed=1)
+    orders = []
+    for _ in range(2):
+        epoch_labels = []
+        for batch_images, batch_labels in batches:
+            assert torch.equal((batch_images[:, 0, 0, 0] * 255).round().long(), batch_labels)
+            epoch_labels.extend(batch_labels.tolist())
+        assert sorted(epoch_labels) == list(range(20))
+        orders.append(epoch_labels)
+    assert orders[0] != orders[1]
+    assert orders[0] != list(range(20))
+
+
+def test_tensor_batches_is_repeatable_for_a_seed():
+    """Two instances with the same seed serve the same augmented batches."""
+    images = numbered_images(count=6)
+    labels = torch.arange(6)
+
+    def first_batch():
+        """Returns the first batch of a fresh shuffled, augmented instance."""
+        batches = TensorBatches(
+            images, labels, batch_size=4, mean=(0.0,) * 3, std=(1.0,) * 3, augment=True, shuffle=True, seed=5
+        )
+        return next(iter(batches))
+
+    assert torch.equal(first_batch()[0], first_batch()[0])
+    assert torch.equal(first_batch()[1], first_batch()[1])
+
+
+def test_tensor_batches_augments_only_when_asked():
+    """Augmentation changes the pixels served; without it they are untouched."""
+    images = numbered_images(count=16)
+    labels = torch.arange(16)
+    plain = TensorBatches(images, labels, batch_size=16, mean=(0.0,) * 3, std=(1.0,) * 3)
+    augmented = TensorBatches(images, labels, batch_size=16, mean=(0.0,) * 3, std=(1.0,) * 3, augment=True)
+    assert torch.allclose(next(iter(plain))[0], images.float() / 255)
+    assert not torch.allclose(next(iter(augmented))[0], images.float() / 255)
+
+
+def test_tensor_batches_works_with_the_training_loop():
+    """The engine trains and evaluates from in-memory batches."""
+    torch.manual_seed(0)
+    images = torch.cat([torch.full((8, 3, 4, 4), 20), torch.full((8, 3, 4, 4), 230)]).to(torch.uint8)
+    labels = torch.cat([torch.zeros(8, dtype=torch.long), torch.ones(8, dtype=torch.long)])
+    batches = TensorBatches(images, labels, batch_size=4, mean=(0.5,) * 3, std=(0.5,) * 3, shuffle=True)
+    model = torch.nn.Sequential(torch.nn.Flatten(), torch.nn.Linear(48, 2))
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
+    history = fit(model, batches, batches, optimizer, epochs=3, device=torch.device("cpu"))
+    assert history["train_loss"][-1] < history["train_loss"][0]
+    assert evaluate(model, batches, torch.device("cpu"), num_classes=2)["accuracy"] == 1.0

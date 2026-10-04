@@ -5,9 +5,12 @@ from hashlib import sha256
 from pathlib import Path
 from zipfile import ZipFile
 
+import torch
 from PIL import Image
 from requests import get
 from sklearn.model_selection import train_test_split
+from torch import Tensor
+from torch.nn.functional import pad
 from torch.utils.data import Dataset
 from torchvision.transforms import CenterCrop, Compose, Normalize, Resize, ToTensor
 
@@ -158,3 +161,96 @@ def imagenet_transform(resize_size: int = 232, crop_size: int = 224) -> Compose:
             Normalize(IMAGENET_MEAN, IMAGENET_STD),
         ]
     )
+
+
+def random_crop_flip(images: Tensor, padding: int, generator: torch.Generator) -> Tensor:
+    """Shifts and mirrors every image of a batch at random, keeping its size.
+
+    Each image shaped (channels, size, size) is padded with zeros on every
+    side, a window of the original size is cut at a random offset, and the
+    window is mirrored left to right with probability one half. Every image
+    gets its own offset and its own coin. The random numbers are drawn on the
+    CPU from ``generator``, so a seed fixes the result on any device.
+    """
+    count, channels, height, width = images.shape
+    device = images.device
+    top = torch.randint(0, 2 * padding + 1, (count,), generator=generator).to(device)
+    left = torch.randint(0, 2 * padding + 1, (count,), generator=generator).to(device)
+    mirrored = (torch.rand(count, generator=generator) < 0.5).to(device)
+    rows = top[:, None] + torch.arange(height, device=device)
+    forward = left[:, None] + torch.arange(width, device=device)
+    backward = left[:, None] + torch.arange(width - 1, -1, -1, device=device)
+    columns = torch.where(mirrored[:, None], backward, forward)
+    padded = pad(images, (padding, padding, padding, padding))
+    return padded[
+        torch.arange(count, device=device)[:, None, None, None],
+        torch.arange(channels, device=device)[None, :, None, None],
+        rows[:, None, :, None],
+        columns[:, None, None, :],
+    ]
+
+
+def channel_statistics(images: Tensor) -> tuple[tuple[float, ...], tuple[float, ...]]:
+    """Returns the mean and standard deviation of each channel of uint8 images.
+
+    Pixels are scaled to the range 0 to 1 first, which is the scale
+    ``TensorBatches`` normalizes on.
+    """
+    scaled = images.float() / 255
+    mean = scaled.mean(dim=(0, 2, 3))
+    std = scaled.std(dim=(0, 2, 3), correction=0)
+    return tuple(mean.tolist()), tuple(std.tolist())
+
+
+class TensorBatches:
+    """Batches of normalized images served from uint8 tensors held in memory.
+
+    Stands in for a data loader when a whole split fits in memory: iterating
+    yields ``(images, labels)`` batches of float images, and every new
+    iteration is one epoch. The tensors live on ``device``, so with a GPU no
+    data moves between devices during training. Shuffling and augmentation
+    (random shift of up to ``padding`` pixels and mirroring) are fixed by
+    ``seed`` and change from one epoch to the next.
+    """
+
+    def __init__(
+        self,
+        images: Tensor,
+        labels: Tensor,
+        batch_size: int,
+        mean: tuple[float, ...],
+        std: tuple[float, ...],
+        augment: bool = False,
+        shuffle: bool = False,
+        padding: int = 4,
+        seed: int = 0,
+        device: torch.device | str = "cpu",
+    ):
+        """Moves the images and labels to the device and stores the batch settings."""
+        self.images = images.to(device)
+        self.labels = torch.as_tensor(labels, dtype=torch.long).to(device)
+        self.batch_size = batch_size
+        self.mean = torch.tensor(mean, device=device).view(1, -1, 1, 1)
+        self.std = torch.tensor(std, device=device).view(1, -1, 1, 1)
+        self.augment = augment
+        self.shuffle = shuffle
+        self.padding = padding
+        self.generator = torch.Generator().manual_seed(seed)
+
+    def __len__(self) -> int:
+        """Returns the number of batches in one epoch."""
+        return -(-self.images.shape[0] // self.batch_size)
+
+    def __iter__(self):
+        """Yields the batches of one epoch."""
+        count = self.images.shape[0]
+        if self.shuffle:
+            order = torch.randperm(count, generator=self.generator).to(self.images.device)
+        else:
+            order = torch.arange(count, device=self.images.device)
+        for start in range(0, count, self.batch_size):
+            chosen = order[start : start + self.batch_size]
+            images = self.images[chosen]
+            if self.augment:
+                images = random_crop_flip(images, self.padding, self.generator)
+            yield (images.float() / 255 - self.mean) / self.std, self.labels[chosen]
