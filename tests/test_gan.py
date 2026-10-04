@@ -257,6 +257,39 @@ def test_train_gan_restores_discriminator_gradients_and_input_checks():
         discriminator(torch.randn(1, 1, 64, 64), torch.tensor([9]))
 
 
+def test_train_gan_restores_flags_after_an_interrupted_generator_step(monkeypatch):
+    """An exception in the generator step leaves gradients and label checks as they were."""
+
+    def interrupt(fake_logits, kind):
+        """Stands in for generator_loss and aborts the step."""
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr("dlv.gan.generator_loss", interrupt)
+    generator, discriminator = small_generator(), small_discriminator()
+    with pytest.raises(KeyboardInterrupt):
+        train_gan(
+            generator, discriminator, random_images(8), torch.zeros(8, dtype=torch.long),
+            epochs=1, batch_size=8, device=DEVICE,
+        )
+    assert all(parameter.requires_grad for parameter in discriminator.parameters())
+    assert generator.validate_labels and discriminator.validate_labels
+
+
+def test_train_gan_keeps_a_frozen_discriminator_parameter_frozen():
+    """A parameter frozen by the caller before training is still frozen afterwards."""
+    discriminator = small_discriminator()
+    frozen = next(discriminator.parameters())
+    frozen.requires_grad_(False)
+    snapshot = frozen.detach().clone()
+    train_gan(
+        small_generator(), discriminator, random_images(8), torch.zeros(8, dtype=torch.long),
+        epochs=1, batch_size=8, device=DEVICE,
+    )
+    assert not frozen.requires_grad
+    assert torch.equal(snapshot, frozen)
+    assert any(p.requires_grad for p in discriminator.parameters())
+
+
 def test_train_gan_differs_for_another_seed():
     """A different seed gives different parameters."""
     first_generator, _, _ = run_training(seed=5)

@@ -206,14 +206,27 @@ def sample_images(generator: ConditionalGenerator, noise: Tensor, labels: Tensor
 
 @contextmanager
 def unchecked_labels(*models: nn.Module):
-    """Turns the per-forward label range check off for the models, restoring it on exit."""
+    """Turns the per-forward label range check off for the models, restoring each prior setting on exit."""
+    previous = [model.validate_labels for model in models]
     for model in models:
         model.validate_labels = False
     try:
         yield
     finally:
-        for model in models:
-            model.validate_labels = True
+        for model, value in zip(models, previous):
+            model.validate_labels = value
+
+
+@contextmanager
+def frozen_parameters(model: nn.Module):
+    """Stops gradient computation for the model's parameters, restoring each one's prior flag on exit."""
+    previous = [parameter.requires_grad for parameter in model.parameters()]
+    model.requires_grad_(False)
+    try:
+        yield
+    finally:
+        for parameter, value in zip(model.parameters(), previous):
+            parameter.requires_grad_(value)
 
 
 def default_snapshot_inputs(
@@ -249,9 +262,10 @@ def train_gan(
     its images through the updated discriminator. Each optimiser owns only its
     own network, and the discriminator computes no parameter gradients during
     the generator step. Label range checks are skipped inside the loop (the
-    labels are validated once up front) and restored afterwards. Both networks train in training mode; the generator switches to
-    evaluation mode for per-epoch diversity and snapshots and returns to
-    training mode. `images` are uint8 (n, 1, 64, 64) and are scaled to -1..1
+    labels are validated once up front) and restored afterwards, as are the
+    discriminator's gradient flags, even if a step raises. Both networks train
+    in training mode; the generator switches to evaluation mode for per-epoch
+    diversity and snapshots and returns to training mode. `images` are uint8 (n, 1, 64, 64) and are scaled to -1..1
     here. Without snapshot noise and labels, a fixed batch with the same number
     of images per class is used.
 
@@ -330,13 +344,12 @@ def train_gan(
                 discriminator_optimizer.step()
 
                 noise = torch.randn(batch, latent_dim, device=device, generator=noise_generator)
-                discriminator.requires_grad_(False)
-                generated_logits = discriminator(generator(noise, batch_labels), batch_labels)
-                generator_step_loss = generator_loss(generated_logits, loss)
-                generator_optimizer.zero_grad(set_to_none=True)
-                generator_step_loss.backward()
-                generator_optimizer.step()
-                discriminator.requires_grad_(True)
+                with frozen_parameters(discriminator):
+                    generated_logits = discriminator(generator(noise, batch_labels), batch_labels)
+                    generator_step_loss = generator_loss(generated_logits, loss)
+                    generator_optimizer.zero_grad(set_to_none=True)
+                    generator_step_loss.backward()
+                    generator_optimizer.step()
 
                 with torch.no_grad():
                     totals += batch * torch.stack(
