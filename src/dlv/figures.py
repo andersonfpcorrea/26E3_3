@@ -64,13 +64,22 @@ def plot_per_class_accuracy(
 
 
 def plot_attention_maps(
-    images: Tensor, maps: Tensor, titles: list[str], path: Path
+    images: Tensor,
+    maps: Tensor,
+    titles: list[str],
+    path: Path,
+    panel_titles: list[str] | None = None,
+    title: str | None = None,
 ) -> Figure:
     """Draws each image next to its attention maps, one panel per head.
 
     `images` is a uint8 tensor (n, 3, h, w) and `maps` a float tensor (n, heads, g, g).
     Each map is upsampled to the image size and drawn semi-transparent over the
     painting, so the image stays visible under it. `titles` has one entry per row.
+    `panel_titles` names the map columns and defaults to the head numbers.
+    Every panel is colour-scaled on its own, from its lowest to its highest
+    value, so colours cannot be compared between panels; `title` is the place
+    to tell the reader.
     """
     count, heads = maps.shape[0], maps.shape[1]
     height, width = images.shape[-2:]
@@ -87,10 +96,13 @@ def plot_attention_maps(
             axis.imshow(painting)
             axis.imshow(upsampled[row, head].numpy(), cmap="jet", alpha=0.5)
             if row == 0:
-                axis.set_title(f"Cabeça {head + 1}", fontsize=9)
+                name = panel_titles[head] if panel_titles else f"Cabeça {head + 1}"
+                axis.set_title(name, fontsize=9)
     for axis in axes.ravel():
         axis.set_xticks([])
         axis.set_yticks([])
+    if title:
+        figure.suptitle(title, fontsize=10)
     figure.tight_layout()
     figure.savefig(path, dpi=150)
     return figure

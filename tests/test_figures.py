@@ -90,6 +90,29 @@ def test_plot_attention_maps_handles_a_single_image(tmp_path):
     assert len(figure.axes) == 3
 
 
+def test_plot_attention_maps_accepts_panel_titles_and_a_figure_title(tmp_path):
+    """Custom panel titles replace the head numbers and the figure gets its own title."""
+    images = torch.randint(0, 256, (2, 3, 16, 16), dtype=torch.uint8)
+    maps = torch.rand(2, 1, 4, 4)
+    figure = plot_attention_maps(
+        images,
+        maps,
+        ["a", "b"],
+        tmp_path / "attention.png",
+        panel_titles=["Média das cabeças"],
+        title="Cada painel tem sua própria escala de cores",
+    )
+    assert figure.axes[1].get_title() == "Média das cabeças"
+    assert figure.get_suptitle() == "Cada painel tem sua própria escala de cores"
+
+
+def test_plot_attention_maps_has_no_figure_title_by_default(tmp_path):
+    """Without a title argument the figure carries no overall title."""
+    images = torch.randint(0, 256, (1, 3, 16, 16), dtype=torch.uint8)
+    figure = plot_attention_maps(images, torch.rand(1, 2, 4, 4), ["a"], tmp_path / "attention.png")
+    assert figure.get_suptitle() == ""
+
+
 ENTRIES = [
     {"group": "Impressionismo", "count": 120, "accuracy": 0.8, "mean_distance": 0.5},
     {"group": "Barroco", "count": 40, "accuracy": 0.5, "mean_distance": 1.2},
