@@ -24,6 +24,7 @@ from ast import (
     ImportFrom,
     Name,
     NamedExpr,
+    Store,
     parse,
     walk,
 )
@@ -121,7 +122,12 @@ def assigned_names(node) -> set[str]:
         targets = [node.target]
     else:
         targets = []
-    names = {leaf.id for target in targets for leaf in walk(target) if isinstance(leaf, Name)}
+    names = {
+        leaf.id
+        for target in targets
+        for leaf in walk(target)
+        if isinstance(leaf, Name) and isinstance(leaf.ctx, Store)
+    }
     names.update(leaf.target.id for leaf in walk(node) if isinstance(leaf, NamedExpr))
     names.discard("__all__")
     return names

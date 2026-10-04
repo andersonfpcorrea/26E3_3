@@ -387,3 +387,16 @@ def test_build_fails_when_two_modules_bind_the_same_name_in_any_form(tmp_path, l
     (cells / "01_support.modules").write_text("beta\nalpha\ngamma\n")
     with pytest.raises(ValueError, match="'LIMIT'"):
         build_notebook(cells, package)
+
+
+@pytest.mark.parametrize(
+    "line",
+    ['REGISTRY["x"] = 1', "REGISTRY.attr = 2", 'REGISTRY["k"] += 1', 'REGISTRY["a"], REGISTRY["b"] = 1, 2'],
+)
+def test_build_accepts_mutating_an_object_defined_in_another_module(tmp_path, line):
+    """Subscript and attribute targets bind nothing, so they never collide."""
+    cells, package = make_sources(tmp_path)
+    (package / "beta.py").write_text(BETA + "\nREGISTRY = {}\n")
+    (package / "gamma.py").write_text(line + "\n")
+    (cells / "01_support.modules").write_text("beta\nalpha\ngamma\n")
+    build_notebook(cells, package)
