@@ -1,7 +1,7 @@
-.PHONY: help setup test notebooks check-notebooks colab-a3 report zip clean
+.PHONY: help setup test notebooks check-notebooks report zip clean
 
 help: ## show this help
-	@grep -E '^[a-z0-9-]+:.*##' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-16s %s\n", $$1, $$2}'
+	@grep -E '^[a-z0-9%-]+:.*##' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-16s %s\n", $$1, $$2}'
 
 setup: ## install dependencies with uv
 	uv sync --all-groups
@@ -15,8 +15,8 @@ notebooks: ## generate the notebooks into build/notebooks
 check-notebooks: ## fail if an executed notebook differs from a fresh build
 	uv run python scripts/build_notebooks.py --check
 
-colab-a3: notebooks ## run Activity 3 on a Colab T4 and collect results
-	uv run python scripts/colab_run.py a3
+colab-%: notebooks ## run one activity on a Colab T4 and collect results (make colab-a3)
+	uv run python scripts/colab_run.py $*
 
 report: ## build the PDF report
 	uv run python scripts/build_report.py
