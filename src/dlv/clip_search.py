@@ -1,28 +1,22 @@
 """Zero-shot concept ranking and text-to-image search with a pre-trained CLIP model."""
 
+import re
 from pathlib import Path
 
 import torch
 from torch import Tensor
 from transformers import CLIPModel, CLIPProcessor
 
-from dlv.data import file_digest, is_readable_image, load_rgb_on_white
+from dlv.data import count_image_files, file_digest, is_readable_image, load_rgb_on_white
 
 CLIP_CHECKPOINT = "openai/clip-vit-base-patch32"
+THUMBNAIL_NAME = re.compile(r"^(.+)_th_\d+$")
 
 
-def list_ads16_images(root: Path) -> list[dict]:
-    """Lists the distinct readable images of the ADS-16 archive.
-
-    Files under an ``Ads`` folder are advertisements and carry the integer
-    name of their numbered category folder; files under a ``Corpus`` folder
-    belong to the participants and have no category. Other files, unreadable
-    files and exact copies by content are left out. Of a group of copies the
-    first path in sorted order is kept. The result is sorted by path.
-    """
+def scan_ads16(root: Path) -> tuple[list[dict], dict]:
+    """Walks the ADS-16 archive once and returns the kept entries with the removal counts."""
     root = Path(root)
-    entries = []
-    seen = set()
+    readable = []
     for path in sorted(path for path in root.rglob("*") if path.is_file()):
         parts = path.relative_to(root).parts[:-1]
         if "Ads" in parts:
@@ -31,15 +25,56 @@ def list_ads16_images(root: Path) -> list[dict]:
             source = "participante"
         else:
             continue
-        if not is_readable_image(path):
+        if is_readable_image(path):
+            readable.append((path, source, file_digest(path)))
+    first_path = {}
+    for path, _, digest in readable:
+        first_path.setdefault(digest, path)
+    originals = {(path.parent, path.stem): path for path, _, _ in readable}
+    entries = []
+    exact_copies = 0
+    thumbnails = 0
+    for path, source, digest in readable:
+        if first_path[digest] != path:
+            exact_copies += 1
             continue
-        digest = file_digest(path)
-        if digest in seen:
+        match = THUMBNAIL_NAME.match(path.stem)
+        if source == "participante" and match and (path.parent, match.group(1)) in originals:
+            thumbnails += 1
             continue
-        seen.add(digest)
         category = int(path.parent.name) if source == "anuncio" and path.parent.name.isdigit() else None
         entries.append({"path": path, "source": source, "category": category})
-    return entries
+    counts = {"files_found": count_image_files(root), "exact_copies": exact_copies, "thumbnails": thumbnails}
+    return entries, counts
+
+
+def list_ads16_images(root: Path) -> list[dict]:
+    """Lists the distinct readable images of the ADS-16 archive.
+
+    Files under an ``Ads`` folder are advertisements and carry the integer
+    name of their numbered category folder; files under a ``Corpus`` folder
+    belong to the participants and have no category. Other files and
+    unreadable files are left out. Of a group of exact copies by content the
+    first path in sorted order is kept.
+
+    A participant file named ``<name>_th_<number>.<ext>`` is a thumbnail of
+    ``<name>.<ext>`` in the same folder. It is left out when that original
+    is in the listing, either as itself or through an exact copy that was
+    kept. A thumbnail whose original is absent stays. Advertisements are
+    never treated as thumbnails. The result is sorted by path.
+    """
+    return scan_ads16(root)[0]
+
+
+def count_ads16_files(root: Path) -> dict:
+    """Counts what the cleaning of the ADS-16 archive removes.
+
+    Returns ``files_found``, every file named like an image under ``root``
+    before any cleaning, ``exact_copies``, the readable files dropped because
+    their content repeats an earlier file, and ``thumbnails``, the files
+    dropped by the thumbnail rule of ``list_ads16_images``.
+    """
+    return scan_ads16(root)[1]
 
 
 def load_clip(device) -> tuple:

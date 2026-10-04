@@ -9,6 +9,7 @@ from PIL import Image
 from dlv.clip_search import (
     cached,
     concept_probabilities,
+    count_ads16_files,
     describe_tokens,
     embed_images,
     embed_texts,
@@ -60,6 +61,66 @@ def test_list_ads16_images_removes_copies_and_unreadable_files(tmp_path):
     assert "1.png" in names
     assert "broken.png" not in names
     assert len(entries) == 4
+
+
+def make_thumbnail_archive(root):
+    """Builds participant folders with thumbnails, an orphan thumbnail, a thumbnail of a copy and an ad named like one."""
+    ads = root / "part1" / "Ads" / "Ads" / "1"
+    user = root / "part1" / "Corpus" / "Corpus" / "user1" / "IM-NEG"
+    other = root / "part1" / "Corpus" / "Corpus" / "user2" / "IM-POS"
+    for folder in (ads, user, other):
+        folder.mkdir(parents=True)
+    Image.new("RGB", (40, 40), (200, 0, 0)).save(user / "1.png")
+    Image.new("RGB", (10, 10), (200, 0, 0)).save(user / "1_th_111.png")
+    Image.new("RGB", (10, 10), (0, 200, 0)).save(user / "2_th_222.png")
+    Image.new("RGB", (40, 40), (0, 0, 200)).save(user / "3.png")
+    Image.new("RGB", (40, 40), (0, 0, 200)).save(other / "3.png")
+    Image.new("RGB", (10, 10), (0, 0, 190)).save(other / "3_th_333.png")
+    Image.new("RGB", (40, 40), (9, 9, 9)).save(ads / "5.png")
+    Image.new("RGB", (10, 10), (9, 9, 8)).save(ads / "5_th_555.png")
+    return root
+
+
+def test_list_ads16_images_drops_thumbnail_beside_its_original(tmp_path):
+    """A participant thumbnail is left out when its original is listed, even if the original is a kept copy."""
+    names = [entry["path"].name for entry in list_ads16_images(make_thumbnail_archive(tmp_path))]
+    assert "1_th_111.png" not in names
+    assert "3_th_333.png" not in names
+    assert "1.png" in names
+
+
+def test_list_ads16_images_keeps_thumbnail_without_original(tmp_path):
+    """A thumbnail whose original is absent stays in the corpus."""
+    names = [entry["path"].name for entry in list_ads16_images(make_thumbnail_archive(tmp_path))]
+    assert "2_th_222.png" in names
+
+
+def test_list_ads16_images_leaves_advertisements_untouched(tmp_path):
+    """The thumbnail rule applies to participant files only."""
+    entries = list_ads16_images(make_thumbnail_archive(tmp_path))
+    names = [entry["path"].name for entry in entries if entry["source"] == "anuncio"]
+    assert names == ["5.png", "5_th_555.png"]
+
+
+def test_list_ads16_images_thumbnail_rule_keeps_exact_copy_removal(tmp_path):
+    """Exact copies are still reduced to their first path next to the thumbnail rule."""
+    entries = list_ads16_images(make_thumbnail_archive(tmp_path))
+    assert [entry["path"].parent.parent.name for entry in entries if entry["path"].name == "3.png"] == ["user1"]
+    assert len(entries) == 5
+
+
+def test_count_ads16_files_reports_each_removal(tmp_path):
+    """The counts separate the files found, the exact copies and the thumbnails."""
+    counts = count_ads16_files(make_thumbnail_archive(tmp_path))
+    assert counts == {"files_found": 8, "exact_copies": 1, "thumbnails": 2}
+
+
+def test_count_ads16_files_on_the_plain_archive(tmp_path):
+    """Corrupt and stray files are in neither removal count."""
+    counts = count_ads16_files(make_archive(tmp_path))
+    assert counts["exact_copies"] == 1
+    assert counts["thumbnails"] == 0
+    assert counts["files_found"] == 7
 
 
 class FakeClip:
