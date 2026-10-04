@@ -24,7 +24,7 @@
 
 - Nas pastas dos participantes, um arquivo com `_th_` no nome é a cópia reduzida de outro arquivo da mesma pasta: `4_th_1448374800.png` é a miniatura de `4.png`.
 - Regra: a miniatura sai quando o original está no corpus. Sem a regra, a mesma figura contaria duas vezes na frequência e viria em dobro nas buscas.
-- Conferência: os 1.173 pares formados pelo nome foram comparados pelos pixels. Em 1.159 as duas imagens são a mesma figura. Dos 1.173 pares, 24 miniaturas já tinham saído como cópias exatas. Por isso a regra removeu 1.149.
+- Conferência: os 1.173 pares formados pelo nome foram comparados pelos pixels (conferido em uma análise à parte, fora do notebook). Em 1.159 as duas imagens são a mesma figura. Dos 1.173 pares, 24 miniaturas já tinham saído como cópias exatas. Por isso a regra removeu 1.149.
 - Limite: a regra olha só o nome. Em 14 pares as figuras são diferentes, e essas 14 imagens ficaram fora do corpus.
 
 ## Como o CLIP alinha imagem e texto
@@ -64,7 +64,7 @@
 
 - A distribuição não aponta um limiar. A figura não mostra vale: a maior probabilidade de cada imagem se espalha de 0,2 a 1, e os quartis são 0,404, 0,602 e 0,832.
 - A escolha veio de olhar 8 imagens sorteadas logo abaixo e 8 logo acima de três candidatos: 0,3, 0,5 e 0,7. Nos 8 exemplos de cada lado vistos no notebook, perto de 0,3 os erros são comuns e perto de 0,7 a maioria dos rótulos combina.
-- Em 0,5 a maioria combina. Acima da linha, os erros vistos são uma chave como "a car" e uma maquete de castelo como "a house". Logo abaixo há rótulos certos que a regra descarta, como um macaco em "an animal" com 0,46.
+- Em 0,5 a maioria combina. Acima da linha, os erros vistos são uma chave como "a car" e uma maquete de castelo como "a house". Logo abaixo há rótulos certos que a regra descarta, como um macaco em "an animal" com 0,46 (conferido em uma análise à parte, fora do notebook).
 
 ![Imagens sorteadas abaixo (linha de cima) e acima (linha de baixo) do limiar de probabilidade 0,5](figures/a2_threshold_050.png)
 

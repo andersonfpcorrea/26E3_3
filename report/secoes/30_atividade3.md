@@ -8,7 +8,7 @@
 - Dataset: `pavansanagapati/images-dataset`, público no Kaggle.
 - Classes: bike, cars, cats, dogs, flowers, horses, human. A classe é o nome da pasta da imagem.
 
-**O download traz o dataset repetido**
+**O download traz o dataset repetido (conferido em uma análise à parte, fora do notebook)**
 
 - O arquivo do Kaggle tem 3.606 imagens em duas árvores de pastas com o mesmo conteúdo: `data/<classe>/` e `data/data/<classe>/`, com 1.803 arquivos cada.
 - Comparando o conteúdo dos arquivos (SHA-256), existem 1.764 imagens distintas.

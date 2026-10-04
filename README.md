@@ -53,7 +53,7 @@ make help             # lista os comandos
 
 ```
 src/dlv/            pacote com toda a lógica: dados, modelos, treino, figuras
-notebooks_src/      células de cada notebook (a1 a a4), só configuração, chamadas e prints
+notebooks_src/      células de cada notebook (a1 a a4), configuração, chamadas, prints e funções curtas de orquestração
 scripts/            build_notebooks.py, colab_run.py, build_report.py
 notebooks/          notebooks executados no Colab
 results/            métricas em JSON, base dos números do relatório

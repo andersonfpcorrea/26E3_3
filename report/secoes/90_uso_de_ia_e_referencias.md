@@ -38,7 +38,9 @@ O enunciado marca este trabalho como "Sinal Verde". Todas as fontes, incluindo f
 - WikiArt, cópia `Artificio/WikiArt` no Hugging Face. Página: https://huggingface.co/datasets/Artificio/WikiArt. A página não declara licença. É um upload de terceiros, usado aqui só para estudo.
 - ADS-16 Computational Advertising Dataset, de Giorgio Roffo (`groffo/ads16-dataset`). Página: https://www.kaggle.com/datasets/groffo/ads16-dataset. Licença na página: "Other (specified in description)". A descrição pede a citação de Roffo, G. e Vinciarelli, A. (2016), "Personality in computational advertising: A benchmark", 4th Workshop on Emotions and Personality in Personalized Systems (EMPIRE) 2016.
 - Images Dataset, de Pavan Sanagapati (`pavansanagapati/images-dataset`). Página: https://www.kaggle.com/datasets/pavansanagapati/images-dataset. Licença na página: "CC0: Public Domain".
-- COVID-19 Radiography Database, de Tawsifur Rahman (`tawsifurrahman/covid19-radiography-database`). Página: https://www.kaggle.com/datasets/tawsifurrahman/covid19-radiography-database. Licença na página: "Data files © Original Authors".
+- COVID-19 Radiography Database, de Tawsifur Rahman (`tawsifurrahman/covid19-radiography-database`). Página: https://www.kaggle.com/datasets/tawsifurrahman/covid19-radiography-database. Licença na página: "Data files © Original Authors". A página pede a citação de dois artigos:
+    - M.E.H. Chowdhury, T. Rahman, A. Khandakar, R. Mazhar, M.A. Kadir, Z.B. Mahbub, K.R. Islam, M.S. Khan, A. Iqbal, N. Al-Emadi, M.B.I. Reaz, M. T. Islam, “Can AI help in screening Viral and COVID-19 pneumonia?” IEEE Access, Vol. 8, 2020, pp. 132665 - 132676. https://ieeexplore.ieee.org/document/9144185
+    - Rahman, T., Khandakar, A., Qiblawey, Y., Tahir, A., Kiranyaz, S., Kashem, S.B.A., Islam, M.T., Maadeed, S.A., Zughaier, S.M., Khan, M.S. and Chowdhury, M.E., 2020. Exploring the Effect of Image Enhancement Techniques on COVID-19 Detection using Chest X-ray Images. https://doi.org/10.1016/j.compbiomed.2021.104319
 
 ### Modelos e pesos pré-treinados
 
@@ -56,7 +58,7 @@ O enunciado marca este trabalho como "Sinal Verde". Todas as fontes, incluindo f
 - scikit-learn 1.9.1.
 - Matplotlib 3.11.2.
 
-As versões vêm do `uv.lock`.
+Os resultados do relatório foram produzidos no Google Colab, com as versões instaladas lá na época das execuções. O `uv.lock` fixa as versões usadas nos testes locais.
 
 ### Artigos dos métodos
 
@@ -74,6 +76,11 @@ As versões vêm do `uv.lock`.
 - Miyato, T. et al. Spectral Normalization for Generative Adversarial Networks. ICLR, 2018.
 - Gulrajani, I. et al. Improved Training of Wasserstein GANs. NeurIPS, 2017.
 - Zhao, S. et al. Differentiable Augmentation for Data-Efficient GAN Training. NeurIPS, 2020.
+- Zhu, J.-Y., Park, T., Isola, P. e Efros, A. A. Unpaired Image-to-Image Translation using Cycle-Consistent Adversarial Networks. ICCV, 2017.
+- Tan, M. e Le, Q. EfficientNet: Rethinking Model Scaling for Convolutional Neural Networks. ICML, 2019.
+- Kingma, D. P. e Ba, J. Adam: A Method for Stochastic Optimization. ICLR, 2015.
+- Loshchilov, I. e Hutter, F. Decoupled Weight Decay Regularization. ICLR, 2019.
+- Deng, J., Dong, W., Socher, R., Li, L.-J., Li, K. e Fei-Fei, L. ImageNet: A Large-Scale Hierarchical Image Database. CVPR, 2009.
 
 ### Referências do enunciado
 
