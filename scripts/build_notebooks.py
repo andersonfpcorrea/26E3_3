@@ -17,12 +17,13 @@ from ast import (
     AnnAssign,
     Assign,
     AsyncFunctionDef,
+    AugAssign,
     ClassDef,
     FunctionDef,
     Import,
     ImportFrom,
     Name,
-    Store,
+    NamedExpr,
     parse,
     walk,
 )
@@ -107,6 +108,25 @@ def check_package_import(node: ImportFrom, filename: str, at_top_level: bool, li
         )
 
 
+def assigned_names(node) -> set[str]:
+    """Returns the names a top-level statement binds by assignment.
+
+    Covers plain, annotated and augmented assignments, tuple targets and
+    walrus expressions. Loop variables of comprehensions are not bound at
+    module level and ``__all__`` only declares exports, so neither counts.
+    """
+    if isinstance(node, Assign):
+        targets = node.targets
+    elif isinstance(node, (AnnAssign, AugAssign)):
+        targets = [node.target]
+    else:
+        targets = []
+    names = {leaf.id for target in targets for leaf in walk(target) if isinstance(leaf, Name)}
+    names.update(leaf.target.id for leaf in walk(node) if isinstance(leaf, NamedExpr))
+    names.discard("__all__")
+    return names
+
+
 def bound_names(body: list) -> tuple[dict[str, str], set[str]]:
     """Collects what the top-level statements of a file bind.
 
@@ -125,12 +145,8 @@ def bound_names(body: list) -> tuple[dict[str, str], set[str]]:
                 imports[alias.asname or alias.name] = f"{node.module}.{alias.name}"
         elif isinstance(node, (FunctionDef, AsyncFunctionDef, ClassDef)):
             definitions.add(node.name)
-        elif isinstance(node, (Assign, AnnAssign)):
-            definitions.update(
-                target.id
-                for target in walk(node)
-                if isinstance(target, Name) and isinstance(target.ctx, Store)
-            )
+        else:
+            definitions.update(assigned_names(node))
     return imports, definitions
 
 

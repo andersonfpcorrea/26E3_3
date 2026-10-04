@@ -355,3 +355,35 @@ def test_main_check_exits_with_0_when_nothing_is_stale(tmp_path, monkeypatch):
     point_builder_at(tmp_path, monkeypatch, package)
     write_executed(tmp_path, cells, package)
     assert main(["--check"]) == 0
+
+
+def test_build_accepts_the_same_comprehension_variable_in_two_modules(tmp_path):
+    """Comprehension loop variables are not definitions, so sharing one is fine."""
+    cells, package = make_sources(tmp_path)
+    (package / "beta.py").write_text(BETA + "\nSQUARES = [item * item for item in range(3)]\n")
+    (package / "gamma.py").write_text("CUBES = [item**3 for item in range(3)]\n")
+    (cells / "01_support.modules").write_text("beta\nalpha\ngamma\n")
+    build_notebook(cells, package)
+
+
+def test_build_accepts_dunder_all_in_two_modules(tmp_path):
+    """Each module may declare its own ``__all__``."""
+    cells, package = make_sources(tmp_path)
+    (package / "beta.py").write_text(BETA + '\n__all__ = ["thing"]\n')
+    (package / "gamma.py").write_text('__all__ = ["other"]\n\n\ndef other():\n    """Returns four."""\n    return 4\n')
+    (cells / "01_support.modules").write_text("beta\nalpha\ngamma\n")
+    build_notebook(cells, package)
+
+
+@pytest.mark.parametrize(
+    "line",
+    ["LIMIT: int = 2", "LIMIT += 2", "(LIMIT := 2)", "(LIMIT, OTHER) = 2, 3", "LIMIT = OTHER = 2"],
+)
+def test_build_fails_when_two_modules_bind_the_same_name_in_any_form(tmp_path, line):
+    """Annotated, augmented, walrus, tuple and chained bindings all count."""
+    cells, package = make_sources(tmp_path)
+    (package / "beta.py").write_text(BETA + "\nLIMIT = 1\n")
+    (package / "gamma.py").write_text(line + "\n")
+    (cells / "01_support.modules").write_text("beta\nalpha\ngamma\n")
+    with pytest.raises(ValueError, match="'LIMIT'"):
+        build_notebook(cells, package)
