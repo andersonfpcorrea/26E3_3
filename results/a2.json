@@ -1770,13 +1770,13 @@
       }
     ]
   },
-  "embedding_seconds": 37.0,
+  "embedding_seconds": 37.5,
   "step_seconds": {
-    "download": 23.5,
-    "listagem": 53.7,
-    "carregar CLIP": 18.6,
-    "embeddings das imagens": 37.0,
-    "embeddings dos textos": 0.3,
+    "download": 22.9,
+    "listagem": 28.5,
+    "carregar CLIP": 24.5,
+    "embeddings das imagens": 37.5,
+    "embeddings dos textos": 0.2,
     "busca 1": 0.0,
     "busca 2": 0.0,
     "busca 3": 0.0,
@@ -1788,12 +1788,12 @@
     "busca 9": 0.0,
     "busca 10": 0.0,
     "busca 11": 0.0,
-    "tokenização": 1.5
+    "tokenização": 1.8
   },
   "model": "openai/clip-vit-base-patch32",
   "logit_scale": 100.0,
   "seed": 42,
-  "runtime_seconds": 164.5,
+  "runtime_seconds": 148.0,
   "peak_gpu_memory_mb": 812.2,
-  "peak_ram_mb": 2265.3
+  "peak_ram_mb": 2337.1
 }
