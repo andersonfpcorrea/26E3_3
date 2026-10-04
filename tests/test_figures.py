@@ -133,6 +133,14 @@ def test_plot_group_accuracy_draws_one_bar_per_group_with_counts(tmp_path):
     assert any("40" in text for text in texts)
 
 
+def test_plot_group_accuracy_has_no_tick_past_one(tmp_path):
+    """The axis leaves room for the labels but its ticks stop at 100%."""
+    figure = plot_group_accuracy(ENTRIES, tmp_path / "groups.png", "Por estilo")
+    axis = figure.axes[0]
+    assert list(axis.get_xticks()) == [0, 0.25, 0.5, 0.75, 1.0]
+    assert axis.get_xlim()[1] > 1.0
+
+
 def test_plot_group_accuracy_lists_largest_group_on_top(tmp_path):
     """The first entry is drawn at the top of the chart."""
     figure = plot_group_accuracy(ENTRIES, tmp_path / "groups.png", "Por estilo")

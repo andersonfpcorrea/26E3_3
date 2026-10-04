@@ -120,6 +120,7 @@ def plot_group_accuracy(entries: list[dict], path: Path, title: str) -> Figure:
     axis.set_yticks(positions, labels=[entry["group"] for entry in entries])
     axis.invert_yaxis()
     axis.set_xlim(0, 1.3)
+    axis.set_xticks([0, 0.25, 0.5, 0.75, 1.0])
     for position, entry in zip(positions, entries):
         axis.text(
             entry["accuracy"] + 0.01,
