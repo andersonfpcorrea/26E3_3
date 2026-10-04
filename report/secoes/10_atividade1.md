@@ -2,6 +2,8 @@
 
 ## Problema
 
+![Atividade 1: dos dados às medidas](diagrams/a1_pipeline.png){: width="665"}
+
 - Tarefa: dizer em qual de 8 períodos uma pintura foi feita, olhando só a imagem.
 - Dataset: WikiArt, na cópia `Artificio/WikiArt` do Hugging Face. São 103.250 linhas, com imagens já em 256x256.
 - Origem e licença: é um upload de terceiros, sem licença declarada. O uso aqui é só para estudo.

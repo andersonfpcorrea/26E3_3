@@ -2,6 +2,8 @@
 
 ## Problema
 
+![Atividade 2: do corpus à busca por texto](diagrams/a2_pipeline.png){: width="665"}
+
 - Tarefa: usar o CLIP pré-treinado para ordenar conceitos pela frequência no corpus ADS-16 e para buscar imagens a partir de uma frase.
 - Dataset: `groffo/ads16-dataset`, público no Kaggle. Modelo: `openai/clip-vit-base-patch32`, sem ajuste de pesos e sem uso de rótulos do ADS-16.
 

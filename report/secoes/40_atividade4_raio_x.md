@@ -2,6 +2,8 @@
 
 ## O projeto analisado
 
+![Atividade 4.1: dos dados à avaliação dos três braços](diagrams/a4_pipeline.png){: width="665"}
+
 - Um grupo anterior montou um sistema de triagem de pneumonia e COVID-19 em radiografias de tórax e encerrou o projeto com resultados "promissores". O time clínico relatou que o modelo "ignora casos positivos".
 - Dados: 1.200 radiografias em três classes: Normal (840), Pneumonia (240) e COVID-19 (120). Divisão 80/20 sem estratificação.
 - Modelo: ResNet-18 sem pré-treinamento, SGD, taxa de aprendizado fixa de 0,01, 15 épocas, sem augmentation.

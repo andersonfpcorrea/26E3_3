@@ -2,6 +2,8 @@
 
 ## Problema
 
+![Atividade 3: das fotos ao classificador](diagrams/a3_pipeline.png){: width="665"}
+
 - Tarefa: dizer a qual de 7 classes pertence uma foto.
 - Dataset: `pavansanagapati/images-dataset`, público no Kaggle.
 - Classes: bike, cars, cats, dogs, flowers, horses, human. A classe é o nome da pasta da imagem.
