@@ -1,6 +1,7 @@
 """Tests for the plotting helpers."""
 
 import torch
+from PIL import Image
 
 from dlv.figures import (
     plot_attention_maps,
@@ -9,7 +10,10 @@ from dlv.figures import (
     plot_group_accuracy,
     plot_histories,
     plot_history,
+    plot_image_grid,
     plot_per_class_accuracy,
+    plot_probability_distributions,
+    plot_ranking,
 )
 
 HISTORY = {
@@ -178,3 +182,55 @@ def test_plot_class_counts_draws_one_bar_per_class_and_split(tmp_path):
     assert [label.get_text() for label in axis.get_xticklabels()] == ["bike", "car"]
     assert [text.get_text() for text in axis.get_legend().get_texts()] == list(COUNTS)
     assert axis.get_ylabel() == "Número de amostras"
+
+
+def test_plot_probability_distributions_marks_the_threshold_in_both_panels(tmp_path):
+    """Two histograms are saved and each one carries a line at the threshold."""
+    probabilities = torch.tensor([[0.7, 0.2, 0.1], [0.4, 0.4, 0.2]])
+    figure = plot_probability_distributions(
+        probabilities.max(dim=1).values, probabilities, 0.5, tmp_path / "distribution.png"
+    )
+    assert (tmp_path / "distribution.png").stat().st_size > 0
+    assert len(figure.axes) == 2
+    for axis in figure.axes:
+        assert [line.get_xdata()[0] for line in axis.lines] == [0.5]
+        assert [text.get_text() for text in axis.get_legend().get_texts()] == ["Limiar 0.5"]
+
+
+RANKINGS = {
+    "corpus": [
+        {"concept": "a photo of a car", "frequency": 0.4, "mean_similarity": 0.21},
+        {"concept": "a photo of food", "frequency": 0.1, "mean_similarity": 0.19},
+    ],
+    "anuncio": [{"concept": "a photo of food", "frequency": 0.3, "mean_similarity": 0.2}],
+}
+
+
+def test_plot_ranking_draws_one_panel_per_ranking_with_the_best_concept_on_top(tmp_path):
+    """Each ranking gets a panel titled by its name, with one bar per concept and the prompt prefix removed."""
+    figure = plot_ranking(RANKINGS, tmp_path / "ranking.png")
+    assert (tmp_path / "ranking.png").stat().st_size > 0
+    assert [axis.get_title() for axis in figure.axes] == ["corpus", "anuncio"]
+    assert [len(axis.patches) for axis in figure.axes] == [2, 1]
+    assert [label.get_text() for label in figure.axes[0].get_yticklabels()] == ["a car", "food"]
+    assert figure.axes[0].yaxis_inverted()
+
+
+def test_plot_ranking_keeps_only_the_top_concepts(tmp_path):
+    """Only the first ``top`` concepts of a ranking are drawn."""
+    figure = plot_ranking(RANKINGS, tmp_path / "ranking.png", top=1)
+    assert [len(axis.patches) for axis in figure.axes] == [1, 1]
+
+
+def test_plot_image_grid_titles_and_captions_every_image(tmp_path):
+    """The grid shows the title, one captioned image per path and hides unused cells."""
+    paths = []
+    for number in range(3):
+        paths.append(tmp_path / f"{number}.png")
+        Image.new("RGB", (6, 4), (number * 50, 0, 0)).save(paths[-1])
+    figure = plot_image_grid(paths, ["a", "b", "c"], "consulta", tmp_path / "grid.png", columns=2)
+    assert (tmp_path / "grid.png").stat().st_size > 0
+    assert figure.get_suptitle() == "consulta"
+    assert len(figure.axes) == 4
+    assert [axis.get_title() for axis in figure.axes[:3]] == ["a", "b", "c"]
+    assert len([axis for axis in figure.axes if axis.images]) == 3

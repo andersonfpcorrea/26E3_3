@@ -4,6 +4,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
+from PIL import Image
 from torch import Tensor
 from torch.nn.functional import interpolate
 
@@ -186,6 +187,78 @@ def plot_class_counts(counts: dict[str, dict[str, int]], path: Path) -> Figure:
     axis.set_xlabel("Classe")
     axis.set_ylabel("Número de amostras")
     axis.legend()
+    figure.tight_layout()
+    figure.savefig(path, dpi=150)
+    return figure
+
+
+def plot_probability_distributions(
+    top_probabilities: Tensor, all_probabilities: Tensor, threshold: float, path: Path
+) -> Figure:
+    """Draws two histograms of concept probabilities with the presence threshold marked.
+
+    The left panel holds the highest probability of each image, the right one
+    every probability of every image, on a logarithmic count axis.
+    """
+    figure, (top_axis, all_axis) = plt.subplots(1, 2, figsize=(11, 4))
+    top_axis.hist(top_probabilities.flatten().tolist(), bins=40, range=(0, 1))
+    top_axis.set_xlabel("Maior probabilidade da imagem")
+    top_axis.set_ylabel("Número de imagens")
+    top_axis.set_title("Conceito mais provável de cada imagem")
+    all_axis.hist(all_probabilities.flatten().tolist(), bins=40, range=(0, 1))
+    all_axis.set_yscale("log")
+    all_axis.set_xlabel("Probabilidade")
+    all_axis.set_ylabel("Número de pares imagem e conceito (escala log)")
+    all_axis.set_title("Todos os conceitos de todas as imagens")
+    for axis in (top_axis, all_axis):
+        axis.axvline(threshold, color="C3", linestyle="--", label=f"Limiar {threshold}")
+        axis.legend()
+    figure.tight_layout()
+    figure.savefig(path, dpi=150)
+    return figure
+
+
+def plot_ranking(rankings: dict[str, list[dict]], path: Path, top: int = 15) -> Figure:
+    """Draws horizontal frequency bars of the best concepts, one panel for each named ranking.
+
+    Each ranking is the output of ``rank_concepts``; the most frequent concept
+    is on top and the mean similarity is written beside each bar.
+    """
+    figure, axes = plt.subplots(1, len(rankings), figsize=(6 * len(rankings), 6), squeeze=False)
+    for axis, (name, ranking) in zip(axes[0], rankings.items()):
+        rows = ranking[:top]
+        positions = range(len(rows))
+        axis.barh(positions, [row["frequency"] for row in rows])
+        axis.set_yticks(positions, labels=[row["concept"].removeprefix("a photo of ") for row in rows], fontsize=8)
+        axis.invert_yaxis()
+        largest = max([row["frequency"] for row in rows], default=0.0)
+        axis.set_xlim(0, largest * 1.45 + 1e-9)
+        for position, row in zip(positions, rows):
+            axis.text(
+                row["frequency"], position,
+                f" {row['frequency']:.1%} (sim. {row['mean_similarity']:.3f})",
+                va="center", fontsize=7,
+            )
+        axis.set_xlabel("Frequência")
+        axis.set_title(name)
+    figure.tight_layout()
+    figure.savefig(path, dpi=150)
+    return figure
+
+
+def plot_image_grid(
+    paths: list[Path], captions: list[str], title: str, path: Path, columns: int = 5
+) -> Figure:
+    """Draws images in a grid of ``columns`` columns, each with its caption, under one title."""
+    rows = max(1, -(-len(paths) // columns))
+    figure, axes = plt.subplots(rows, columns, figsize=(2.4 * columns, 2.6 * rows + 0.6), squeeze=False)
+    for axis in axes.ravel():
+        axis.axis("off")
+    for axis, image_path, caption in zip(axes.ravel(), paths, captions):
+        with Image.open(image_path) as image:
+            axis.imshow(image.convert("RGB"))
+        axis.set_title(caption, fontsize=7)
+    figure.suptitle(title, fontsize=10)
     figure.tight_layout()
     figure.savefig(path, dpi=150)
     return figure
