@@ -4,9 +4,13 @@ import torch
 from PIL import Image
 
 from dlv.figures import (
+    plot_arm_metric,
     plot_attention_maps,
     plot_class_counts,
     plot_confusion,
+    plot_gan_curves,
+    plot_gan_diversity,
+    plot_gan_snapshots,
     plot_group_accuracy,
     plot_histories,
     plot_history,
@@ -14,6 +18,7 @@ from dlv.figures import (
     plot_per_class_accuracy,
     plot_probability_distributions,
     plot_ranking,
+    plot_sample_rows,
 )
 
 HISTORY = {
@@ -234,3 +239,67 @@ def test_plot_image_grid_titles_and_captions_every_image(tmp_path):
     assert len(figure.axes) == 4
     assert [axis.get_title() for axis in figure.axes[:3]] == ["a", "b", "c"]
     assert len([axis for axis in figure.axes if axis.images]) == 3
+
+
+GAN_HISTORY = {
+    "discriminator_loss": [1.0, 0.8, 0.7],
+    "generator_loss": [0.9, 1.1, 1.3],
+    "real_score": [0.6, 0.7, 0.7],
+    "fake_score": [0.4, 0.3, 0.3],
+    "diversity": {0: [0.1, 0.2, 0.2], 1: [0.1, 0.15, 0.2]},
+    "snapshots": {1: torch.zeros(1, 20, 34, dtype=torch.uint8), 3: torch.full((1, 20, 34), 200, dtype=torch.uint8)},
+}
+
+
+def test_plot_gan_curves_has_a_loss_and_a_score_panel_with_every_version(tmp_path):
+    """Loss and score panels carry the discriminator and generator curves of every version."""
+    figure = plot_gan_curves({"v1": GAN_HISTORY, "v2": GAN_HISTORY}, tmp_path / "curves.png")
+    assert (tmp_path / "curves.png").stat().st_size > 0
+    assert len(figure.axes) == 2
+    assert len(figure.axes[0].lines) == 4
+    assert len(figure.axes[1].lines) == 4
+
+
+def test_plot_gan_diversity_draws_one_panel_per_class_with_the_real_reference(tmp_path):
+    """Each class panel holds one curve per version and a dashed reference line, starting at epoch 2."""
+    figure = plot_gan_diversity(
+        {"v1": GAN_HISTORY["diversity"], "v2": GAN_HISTORY["diversity"]},
+        {0: 0.3, 1: 0.25},
+        ["Normal", "COVID-19"],
+        tmp_path / "diversity.png",
+    )
+    assert len(figure.axes) == 2
+    assert figure.axes[0].get_title() == "Normal"
+    assert len(figure.axes[0].lines) == 3
+    assert list(figure.axes[0].lines[0].get_xdata()) == [2, 3]
+
+
+def test_plot_gan_snapshots_draws_one_panel_per_epoch(tmp_path):
+    """Snapshots are drawn in epoch order, each panel titled with its epoch."""
+    figure = plot_gan_snapshots(GAN_HISTORY["snapshots"], tmp_path / "snapshots.png", "Titulo")
+    assert (tmp_path / "snapshots.png").stat().st_size > 0
+    assert [axis.get_title() for axis in figure.axes] == ["Época 1", "Época 3"]
+
+
+def test_plot_sample_rows_draws_one_labelled_row_per_group(tmp_path):
+    """Every named group of images gets one row of panels, labelled with its name."""
+    rows = {"reais": torch.zeros(3, 1, 8, 8, dtype=torch.uint8), "geradas": torch.ones(3, 1, 8, 8, dtype=torch.uint8)}
+    figure = plot_sample_rows(rows, tmp_path / "rows.png")
+    assert (tmp_path / "rows.png").stat().st_size > 0
+    assert len(figure.axes) == 6
+    assert figure.axes[0].get_ylabel() == "reais"
+    assert figure.axes[3].get_ylabel() == "geradas"
+
+
+def test_plot_arm_metric_draws_a_bar_per_class_and_arm_with_error_bars(tmp_path):
+    """Bars sit at the class means of every arm and the labels name the classes."""
+    summaries = {
+        "A": [{"class": 0, "mean": 0.9, "std": 0.01}, {"class": 1, "mean": 0.5, "std": 0.1}],
+        "B": [{"class": 0, "mean": 0.8, "std": 0.02}, {"class": 1, "mean": 0.6, "std": 0.2}],
+    }
+    figure = plot_arm_metric(summaries, ["Normal", "COVID-19"], "Titulo", tmp_path / "arms.png")
+    axis = figure.axes[0]
+    heights = sorted(round(patch.get_height(), 2) for patch in axis.patches)
+    assert heights == [0.5, 0.6, 0.8, 0.9]
+    assert [label.get_text() for label in axis.get_xticklabels()] == ["Normal", "COVID-19"]
+    assert axis.get_title() == "Titulo"

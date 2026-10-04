@@ -262,3 +262,127 @@ def plot_image_grid(
     figure.tight_layout()
     figure.savefig(path, dpi=150)
     return figure
+
+
+def plot_gan_curves(histories: dict[str, dict], path: Path) -> Figure:
+    """Draws the loss and the score curves of one or more GAN training runs.
+
+    The left panel holds the discriminator loss (dashed) and the generator
+    loss (solid); the right one the mean discriminator score on real (solid)
+    and generated (dashed) images. Each run keeps one colour. Under the hinge
+    loss the scores are sigmoids of values the loss does not treat as
+    probabilities, so they read only as a relative signal.
+    """
+    figure, (loss_axis, score_axis) = plt.subplots(1, 2, figsize=(12, 4))
+    for index, (name, history) in enumerate(histories.items()):
+        colour = f"C{index}"
+        epochs = range(1, len(history["generator_loss"]) + 1)
+        loss_axis.plot(epochs, history["discriminator_loss"], linestyle="--", color=colour, label=f"{name}, discriminador")
+        loss_axis.plot(epochs, history["generator_loss"], color=colour, label=f"{name}, gerador")
+        score_axis.plot(epochs, history["real_score"], color=colour, label=f"{name}, reais")
+        score_axis.plot(epochs, history["fake_score"], linestyle="--", color=colour, label=f"{name}, geradas")
+    loss_axis.set_xlabel("Época")
+    loss_axis.set_ylabel("Perda")
+    loss_axis.legend(fontsize=7)
+    score_axis.set_xlabel("Época")
+    score_axis.set_ylabel("Escore médio do discriminador")
+    score_axis.legend(fontsize=7)
+    figure.tight_layout()
+    figure.savefig(path, dpi=150)
+    return figure
+
+
+def plot_gan_diversity(
+    diversities: dict[str, dict[int, list[float]]],
+    real_diversity: dict[int, float],
+    class_names: list[str],
+    path: Path,
+) -> Figure:
+    """Draws the diversity of generated images per epoch, one panel for each class.
+
+    Every run is one curve, drawn from epoch 2 because the value read at
+    epoch 1 is not reliable. A dashed line marks the diversity of the real
+    training images of the class, the level a healthy generator approaches.
+    """
+    figure, axes = plt.subplots(1, len(class_names), figsize=(4.2 * len(class_names), 3.8), squeeze=False)
+    for label, (axis, class_name) in enumerate(zip(axes[0], class_names)):
+        for index, (name, per_class) in enumerate(diversities.items()):
+            values = per_class[label][1:]
+            axis.plot(range(2, len(values) + 2), values, color=f"C{index}", label=name)
+        axis.axhline(real_diversity[label], color="black", linestyle="--", label="Imagens reais")
+        axis.set_title(class_name)
+        axis.set_xlabel("Época")
+        axis.set_ylabel("Diversidade (diferença média de pixels)")
+        axis.legend(fontsize=7)
+    figure.tight_layout()
+    figure.savefig(path, dpi=150)
+    return figure
+
+
+def plot_gan_snapshots(snapshots: dict[int, Tensor], path: Path, title: str) -> Figure:
+    """Draws the image grids a GAN produced from fixed inputs, one panel per epoch, earliest on top.
+
+    ``snapshots`` maps an epoch to a uint8 grid tensor (1, h, w).
+    """
+    epochs = sorted(snapshots)
+    first = snapshots[epochs[0]]
+    aspect = first.shape[1] / first.shape[2]
+    figure, axes = plt.subplots(len(epochs), 1, figsize=(9, 9 * aspect * len(epochs) + 1), squeeze=False)
+    for axis, epoch in zip(axes[:, 0], epochs):
+        axis.imshow(snapshots[epoch][0].numpy(), cmap="gray", vmin=0, vmax=255)
+        axis.set_title(f"Época {epoch}", fontsize=9)
+        axis.axis("off")
+    figure.suptitle(title, fontsize=10)
+    figure.tight_layout()
+    figure.savefig(path, dpi=150)
+    return figure
+
+
+def plot_sample_rows(rows: dict[str, Tensor], path: Path) -> Figure:
+    """Draws groups of grayscale images, one row for each named group, labelled on the left.
+
+    Every group is a uint8 tensor (n, 1, h, w) and all groups have the same count.
+    """
+    columns = len(next(iter(rows.values())))
+    figure, axes = plt.subplots(len(rows), columns, figsize=(1.6 * columns + 2, 1.7 * len(rows)), squeeze=False)
+    for row_axes, (name, images) in zip(axes, rows.items()):
+        for axis, image in zip(row_axes, images):
+            axis.imshow(image[0].numpy(), cmap="gray", vmin=0, vmax=255)
+            axis.set_xticks([])
+            axis.set_yticks([])
+        row_axes[0].set_ylabel(name, rotation=0, ha="right", va="center", fontsize=8)
+    figure.tight_layout()
+    figure.savefig(path, dpi=150)
+    return figure
+
+
+def plot_arm_metric(
+    summaries: dict[str, list[dict]], class_names: list[str], title: str, path: Path
+) -> Figure:
+    """Draws grouped bars of a per-class metric, one bar for each arm, with standard deviation as error bars.
+
+    ``summaries`` maps an arm to the output of ``summarise_runs``.
+    """
+    arms = list(summaries)
+    width = 0.8 / len(arms)
+    figure, axis = plt.subplots(figsize=(max(6, 2.2 * len(class_names)), 4.2))
+    for arm_index, arm in enumerate(arms):
+        offsets = [
+            class_index + (arm_index - (len(arms) - 1) / 2) * width for class_index in range(len(class_names))
+        ]
+        axis.bar(
+            offsets,
+            [row["mean"] for row in summaries[arm]],
+            width,
+            yerr=[row["std"] for row in summaries[arm]],
+            capsize=4,
+            label=arm,
+        )
+    axis.set_xticks(range(len(class_names)), labels=class_names)
+    axis.set_ylim(0, 1.05)
+    axis.set_ylabel("Revocação")
+    axis.set_title(title, fontsize=10)
+    axis.legend(fontsize=8)
+    figure.tight_layout()
+    figure.savefig(path, dpi=150)
+    return figure
