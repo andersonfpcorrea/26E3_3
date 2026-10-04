@@ -10,7 +10,7 @@ from torch.nn.utils import parametrizations
 from torchvision.utils import make_grid
 
 IMAGE_SIZE = 64
-LOSS_KINDS = ("bce", "hinge")
+LOSS_KINDS = ("bce", "hinge", "wgan")
 DIVERSITY_SAMPLES = 32
 DEFAULT_SNAPSHOT_PER_CLASS = 8
 SNAPSHOT_COLUMNS = 8
@@ -97,9 +97,17 @@ class ConditionalDiscriminator(nn.Module):
     """
 
     def __init__(
-        self, num_classes: int = 3, base_channels: int = 64, spectral_norm: bool = False
+        self,
+        num_classes: int = 3,
+        base_channels: int = 64,
+        spectral_norm: bool = False,
+        batch_norm: bool = True,
     ):
-        """Builds the label map and the strided convolutions from 64x64 down to one logit."""
+        """Builds the label map and the strided convolutions from 64x64 down to one logit.
+
+        ``batch_norm=False`` drops batch normalisation from the plain variant,
+        as the gradient penalty of a Wasserstein critic requires.
+        """
         super().__init__()
         self.num_classes = num_classes
         self.validate_labels = True
@@ -114,7 +122,7 @@ class ConditionalDiscriminator(nn.Module):
                     spectral_norm,
                 )
             )
-            if not spectral_norm and index > 0:
+            if not spectral_norm and batch_norm and index > 0:
                 layers.append(nn.BatchNorm2d(sizes[index + 1]))
             layers.append(nn.LeakyReLU(0.2, True))
         layers.append(self.weight_layer(nn.Conv2d(sizes[4], 1, 4, 1, 0), spectral_norm))
@@ -136,13 +144,15 @@ class ConditionalDiscriminator(nn.Module):
 
 
 def discriminator_loss(real_logits: Tensor, fake_logits: Tensor, kind: str) -> Tensor:
-    """Loss the discriminator minimises: binary cross-entropy or hinge, summed over real and fake."""
+    """Loss the discriminator minimises: binary cross-entropy, hinge, or the Wasserstein critic loss."""
     if kind == "bce":
         return binary_cross_entropy_with_logits(
             real_logits, torch.ones_like(real_logits)
         ) + binary_cross_entropy_with_logits(fake_logits, torch.zeros_like(fake_logits))
     if kind == "hinge":
         return relu(1.0 - real_logits).mean() + relu(1.0 + fake_logits).mean()
+    if kind == "wgan":
+        return fake_logits.mean() - real_logits.mean()
     raise ValueError(f"loss kind must be one of {LOSS_KINDS}, got {kind!r}")
 
 
@@ -152,7 +162,25 @@ def generator_loss(fake_logits: Tensor, kind: str) -> Tensor:
         return binary_cross_entropy_with_logits(fake_logits, torch.ones_like(fake_logits))
     if kind == "hinge":
         return -fake_logits.mean()
+    if kind == "wgan":
+        return -fake_logits.mean()
     raise ValueError(f"loss kind must be one of {LOSS_KINDS}, got {kind!r}")
+
+
+def gradient_penalty(
+    discriminator: nn.Module, real: Tensor, fake: Tensor, labels: Tensor, generator: torch.Generator
+) -> Tensor:
+    """Mean squared distance from one of the critic's input gradient norm, on random mixes of real and fake images.
+
+    Each mix takes a uniform random share of a real and of a fake image,
+    drawn from ``generator``. This is the penalty of the WGAN-GP critic.
+    """
+    share = torch.rand(real.shape[0], 1, 1, 1, generator=generator, device=real.device)
+    mixed = (share * real + (1 - share) * fake).requires_grad_(True)
+    logits = discriminator(mixed, labels)
+    gradients = torch.autograd.grad(logits.sum(), mixed, create_graph=True)[0]
+    norms = gradients.flatten(1).norm(dim=1)
+    return ((norms - 1.0) ** 2).mean()
 
 
 def unit_range(images: Tensor) -> Tensor:
@@ -255,6 +283,7 @@ def train_gan(
     discriminator_lr: float = 2e-4,
     betas=(0.5, 0.999),
     seed: int = 42,
+    gradient_penalty_weight: float = 0.0,
     snapshot_epochs=(),
     snapshot_noise: Tensor | None = None,
     snapshot_labels: Tensor | None = None,
@@ -281,11 +310,14 @@ def train_gan(
 
     `seed` governs the shuffling order, the training noise and the fixed
     diversity and snapshot noise, all drawn from local generators; the global
-    random state is left untouched. Initialising the networks is the caller's
+    random state is left untouched. A positive ``gradient_penalty_weight`` adds the
+    WGAN-GP penalty to the discriminator loss. Initialising the networks is the caller's
     job and is not covered by `seed`.
     """
     if loss not in LOSS_KINDS:
         raise ValueError(f"loss kind must be one of {LOSS_KINDS}, got {loss!r}")
+    if gradient_penalty_weight < 0:
+        raise ValueError("gradient_penalty_weight must not be negative")
     if (snapshot_noise is None) != (snapshot_labels is None):
         raise ValueError("snapshot_noise and snapshot_labels must be given together")
     check_labels(labels, generator.num_classes)
@@ -343,6 +375,10 @@ def train_gan(
                 real_logits = discriminator(real, batch_labels)
                 fake_logits = discriminator(fake, batch_labels)
                 discriminator_step_loss = discriminator_loss(real_logits, fake_logits, loss)
+                if gradient_penalty_weight > 0:
+                    discriminator_step_loss = discriminator_step_loss + gradient_penalty_weight * gradient_penalty(
+                        discriminator, real, fake, batch_labels, noise_generator
+                    )
                 discriminator_optimizer.zero_grad(set_to_none=True)
                 discriminator_step_loss.backward()
                 discriminator_optimizer.step()

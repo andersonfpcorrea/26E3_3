@@ -14,6 +14,7 @@ from dlv.gan import (
     discriminator_loss,
     generate,
     generator_loss,
+    gradient_penalty,
     nearest_real_distance,
     pairwise_diversity,
     train_gan,
@@ -434,3 +435,66 @@ def test_diagnose_gan_works_on_a_single_epoch_history():
     found = diagnose_gan(fake_history(1), {0: 0.2, 1: 0.2, 2: 0.2})
     assert found["window_epochs"] == 1
     assert found["discriminator_loss_final"] == pytest.approx(1.0)
+
+
+def test_wgan_losses_match_hand_computation():
+    """The critic loss is the mean fake logit minus the mean real logit and the generator loss is minus the mean fake logit."""
+    real, fake = torch.tensor([1.0, 3.0]), torch.tensor([0.0, 2.0])
+    assert discriminator_loss(real, fake, "wgan").item() == pytest.approx(1.0 - 2.0)
+    assert generator_loss(fake, "wgan").item() == pytest.approx(-1.0)
+
+
+def test_gradient_penalty_is_zero_for_a_critic_with_unit_gradient_norm():
+    """A critic whose input gradient has norm one is not penalised."""
+
+    class UnitSlope(nn.Module):
+        """Critic whose logit is the first pixel, so its input gradient has norm one."""
+
+        def forward(self, images, labels):
+            """Returns the first pixel of every image."""
+            return images[:, 0, 0, 0]
+
+    real, fake = torch.rand(4, 1, 64, 64), torch.rand(4, 1, 64, 64)
+    penalty = gradient_penalty(UnitSlope(), real, fake, torch.zeros(4, dtype=torch.long), torch.Generator().manual_seed(0))
+    assert penalty.item() == pytest.approx(0.0, abs=1e-6)
+
+
+def test_gradient_penalty_grows_with_the_slope_of_the_critic():
+    """A critic with slope three has a penalty of (3 - 1) squared."""
+
+    class Slope(nn.Module):
+        """Critic whose logit is three times the first pixel."""
+
+        def forward(self, images, labels):
+            """Returns three times the first pixel of every image."""
+            return 3 * images[:, 0, 0, 0]
+
+    real, fake = torch.rand(4, 1, 64, 64), torch.rand(4, 1, 64, 64)
+    penalty = gradient_penalty(Slope(), real, fake, torch.zeros(4, dtype=torch.long), torch.Generator().manual_seed(0))
+    assert penalty.item() == pytest.approx(4.0, rel=1e-5)
+
+
+def test_discriminator_without_batch_norm_has_none():
+    """batch_norm=False leaves the plain discriminator without any normalisation layer."""
+    discriminator = small_discriminator(batch_norm=False)
+    assert not any(isinstance(module, nn.BatchNorm2d) for module in discriminator.modules())
+
+
+def test_train_gan_with_wgan_penalty_updates_both_networks():
+    """The Wasserstein loss with gradient penalty trains and records finite histories."""
+    torch.manual_seed(100)
+    generator, discriminator = small_generator(), small_discriminator(batch_norm=False)
+    before = parameters_of(generator), parameters_of(discriminator)
+    history = train_gan(
+        generator, discriminator, random_images(16), torch.arange(16) % 3, epochs=1, batch_size=8,
+        device=DEVICE, loss="wgan", gradient_penalty_weight=10.0,
+    )
+    assert not torch.equal(before[0], parameters_of(generator))
+    assert not torch.equal(before[1], parameters_of(discriminator))
+    assert all(isfinite(value) for value in history["discriminator_loss"] + history["generator_loss"])
+
+
+def test_train_gan_rejects_a_negative_penalty_weight():
+    """A negative gradient penalty weight is refused."""
+    with pytest.raises(ValueError):
+        run_training(loss="wgan", gradient_penalty_weight=-1.0)
