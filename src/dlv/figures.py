@@ -294,22 +294,27 @@ def plot_gan_curves(histories: dict[str, dict], path: Path) -> Figure:
 
 
 def plot_gan_diversity(
-    diversities: dict[str, dict[int, list[float]]],
+    diversities: dict[str, list[dict[int, list[float]]]],
     real_diversity: dict[int, float],
     class_names: list[str],
     path: Path,
 ) -> Figure:
     """Draws the diversity of generated images per epoch, one panel for each class.
 
-    Every run is one curve, drawn from epoch 2 because the value read at
+    ``diversities`` maps a version to one diversity history per seed. Every
+    seed is a thin curve and the mean over the seeds a thick one, all in the
+    colour of the version. Curves start at epoch 2 because the value read at
     epoch 1 is not reliable. A dashed line marks the diversity of the real
     training images of the class, the level a healthy generator approaches.
     """
-    figure, axes = plt.subplots(1, len(class_names), figsize=(4.2 * len(class_names), 3.8), squeeze=False)
+    figure, axes = plt.subplots(1, len(class_names), figsize=(4.6 * len(class_names), 4.0), squeeze=False)
     for label, (axis, class_name) in enumerate(zip(axes[0], class_names)):
-        for index, (name, per_class) in enumerate(diversities.items()):
-            values = per_class[label][1:]
-            axis.plot(range(2, len(values) + 2), values, color=f"C{index}", label=name)
+        for index, (name, per_seed) in enumerate(diversities.items()):
+            curves = [seed_history[label][1:] for seed_history in per_seed]
+            for values in curves:
+                axis.plot(range(2, len(values) + 2), values, color=f"C{index}", linewidth=0.8, alpha=0.4)
+            means = [sum(column) / len(column) for column in zip(*curves)]
+            axis.plot(range(2, len(means) + 2), means, color=f"C{index}", linewidth=2.2, label=f"{name} (média)")
         axis.axhline(real_diversity[label], color="black", linestyle="--", label="Imagens reais")
         axis.set_title(class_name)
         axis.set_xlabel("Época")

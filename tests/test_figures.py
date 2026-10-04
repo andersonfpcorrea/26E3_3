@@ -1,5 +1,6 @@
 """Tests for the plotting helpers."""
 
+import pytest
 import torch
 from PIL import Image
 
@@ -260,18 +261,22 @@ def test_plot_gan_curves_has_a_loss_and_a_score_panel_with_every_version(tmp_pat
     assert len(figure.axes[1].lines) == 4
 
 
-def test_plot_gan_diversity_draws_one_panel_per_class_with_the_real_reference(tmp_path):
-    """Each class panel holds one curve per version and a dashed reference line, starting at epoch 2."""
+def test_plot_gan_diversity_draws_every_seed_and_the_mean_for_each_version(tmp_path):
+    """Each class panel holds, per version, one thin curve per seed and a thick mean curve, plus the real line, from epoch 2."""
+    seeds = [GAN_HISTORY["diversity"], {0: [0.1, 0.3, 0.4], 1: [0.1, 0.25, 0.2]}]
     figure = plot_gan_diversity(
-        {"v1": GAN_HISTORY["diversity"], "v2": GAN_HISTORY["diversity"]},
+        {"v1": seeds, "v3": seeds},
         {0: 0.3, 1: 0.25},
         ["Normal", "COVID-19"],
         tmp_path / "diversity.png",
     )
     assert len(figure.axes) == 2
     assert figure.axes[0].get_title() == "Normal"
-    assert len(figure.axes[0].lines) == 3
+    assert len(figure.axes[0].lines) == 2 * (2 + 1) + 1
     assert list(figure.axes[0].lines[0].get_xdata()) == [2, 3]
+    mean_line = figure.axes[0].lines[2]
+    assert list(mean_line.get_ydata()) == pytest.approx([0.25, 0.3])
+    assert len({line.get_color() for line in figure.axes[0].lines[:3]}) == 1
 
 
 def test_plot_gan_snapshots_draws_one_panel_per_epoch(tmp_path):
