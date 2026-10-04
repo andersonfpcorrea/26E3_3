@@ -15,7 +15,14 @@ def train_all(model: nn.Module) -> None:
 
 
 def run_epoch(
-    model, loader, device, optimizer=None, scheduler=None, use_amp: bool = False, scaler=None
+    model,
+    loader,
+    device,
+    optimizer=None,
+    scheduler=None,
+    use_amp: bool = False,
+    scaler=None,
+    class_weights=None,
 ) -> tuple[float, float]:
     """Runs one pass over a loader and returns mean loss and accuracy.
 
@@ -24,11 +31,14 @@ def run_epoch(
     batch. ``use_amp`` turns on mixed precision with gradient scaling on CUDA
     and does nothing on other devices. Pass a ``scaler`` to keep one gradient
     scale across epochs; without it a new one is made for this pass.
+    ``class_weights``, a tensor with one weight per class, weights the
+    cross-entropy of every sample by its class.
     """
     training = optimizer is not None
     amp_enabled = use_amp and device.type == "cuda"
     if scaler is None:
         scaler = GradScaler(device.type, enabled=amp_enabled)
+    weights = None if class_weights is None else class_weights.to(device)
     total_loss = 0.0
     correct = 0
     count = 0
@@ -38,7 +48,7 @@ def run_epoch(
             labels = labels.to(device)
             with autocast(device.type, enabled=amp_enabled):
                 logits = model(images)
-                loss = cross_entropy(logits, labels)
+                loss = cross_entropy(logits, labels, weight=weights)
             if training:
                 optimizer.zero_grad()
                 scaler.scale(loss).backward()
@@ -62,18 +72,22 @@ def fit(
     set_train_mode=train_all,
     scheduler=None,
     use_amp: bool = False,
+    class_weights=None,
 ) -> dict[str, list[float]]:
     """Trains a classifier and returns loss and accuracy for every epoch.
 
     ``set_train_mode`` decides which layers train. Pass a custom function to
     keep a frozen backbone in evaluation mode. ``scheduler`` and ``use_amp``
-    are passed to every training pass.
+    are passed to every training pass. ``class_weights`` weights the training
+    loss only, so validation loss stays comparable between runs.
     """
     scaler = GradScaler(device.type, enabled=use_amp and device.type == "cuda")
     history = {"train_loss": [], "train_accuracy": [], "val_loss": [], "val_accuracy": []}
     for epoch in range(epochs):
         set_train_mode(model)
-        train_loss, train_accuracy = run_epoch(model, train_loader, device, optimizer, scheduler, use_amp, scaler)
+        train_loss, train_accuracy = run_epoch(
+            model, train_loader, device, optimizer, scheduler, use_amp, scaler, class_weights
+        )
         model.eval()
         val_loss, val_accuracy = run_epoch(model, validation_loader, device, use_amp=use_amp)
         history["train_loss"].append(train_loss)

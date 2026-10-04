@@ -178,11 +178,11 @@ def test_fit_shares_one_gradient_scaler_across_epochs(monkeypatch):
     seen = []
     real = engine.run_epoch
 
-    def recording(model, loader, device, optimizer=None, scheduler=None, use_amp=False, scaler=None):
+    def recording(model, loader, device, optimizer=None, scheduler=None, use_amp=False, scaler=None, class_weights=None):
         """Records the scaler and delegates to the real pass."""
         if optimizer is not None:
             seen.append(scaler)
-        return real(model, loader, device, optimizer, scheduler, use_amp, scaler)
+        return real(model, loader, device, optimizer, scheduler, use_amp, scaler, class_weights)
 
     monkeypatch.setattr(engine, "run_epoch", recording)
     model = nn.Linear(2, 2)
@@ -260,3 +260,35 @@ def test_within_distance_accuracy_counts_neighbouring_classes_as_hits():
 def test_within_distance_accuracy_of_an_empty_matrix_is_zero():
     """A matrix with no samples gives zero instead of dividing by zero."""
     assert within_distance_accuracy([[0, 0], [0, 0]]) == 0.0
+
+
+def test_run_epoch_class_weights_scale_the_loss_per_class():
+    """With weights, the mean loss follows the weighted cross-entropy and plain runs stay unchanged."""
+    model = AlwaysFirstClass()
+    loader = DataLoader(TensorDataset(torch.zeros(2, 2), torch.tensor([0, 1])), batch_size=2)
+    plain_loss, _ = run_epoch(model, loader, torch.device("cpu"))
+    weighted_loss, _ = run_epoch(
+        model, loader, torch.device("cpu"), class_weights=torch.tensor([1.0, 3.0])
+    )
+    expected = torch.nn.functional.cross_entropy(
+        torch.tensor([[1.0, 0.0], [1.0, 0.0]]), torch.tensor([0, 1]), weight=torch.tensor([1.0, 3.0])
+    )
+    assert weighted_loss == pytest.approx(expected.item())
+    assert weighted_loss != pytest.approx(plain_loss)
+
+
+def test_fit_weights_the_training_loss_and_not_the_validation_loss():
+    """Class weights reach the training pass only, so validation loss stays comparable."""
+    model = nn.Linear(2, 2)
+    with torch.no_grad():
+        model.weight.zero_()
+        model.bias.copy_(torch.tensor([1.0, 0.0]))
+    loader = DataLoader(TensorDataset(torch.zeros(2, 2), torch.tensor([0, 1])), batch_size=2)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.0)
+    plain = fit(model, loader, loader, optimizer, epochs=1, device=torch.device("cpu"))
+    weighted = fit(
+        model, loader, loader, optimizer, epochs=1, device=torch.device("cpu"),
+        class_weights=torch.tensor([1.0, 3.0]),
+    )
+    assert weighted["val_loss"] == pytest.approx(plain["val_loss"])
+    assert weighted["train_loss"] != pytest.approx(plain["train_loss"])
