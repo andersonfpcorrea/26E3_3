@@ -28,7 +28,7 @@ zip: report ## build the delivery archive
 	mkdir -p entrega
 	rm -f entrega/anderson_correa_computer-vision_pd.zip
 	zip -j entrega/anderson_correa_computer-vision_pd.zip notebooks/A1_vision_transformers.ipynb notebooks/A2_clip_ads16.ipynb notebooks/A3_cnn_kaggle.ipynb notebooks/A4_estudo_caso_raio_x.ipynb report/anderson_correa_deep-learning-and-vision_computer-vision.pdf
-	zip -r entrega/anderson_correa_computer-vision_pd.zip src/dlv tests pyproject.toml uv.lock Makefile README.md -x '*/__pycache__/*' '*/.pytest_cache/*' '*.pyc'
+	zip -r entrega/anderson_correa_computer-vision_pd.zip src/dlv tests scripts notebooks_src pyproject.toml uv.lock Makefile README.md -x '*/__pycache__/*' '*/.pytest_cache/*' '*.pyc'
 
 clean: ## remove generated files
 	rm -rf build entrega
