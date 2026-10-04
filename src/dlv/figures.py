@@ -106,7 +106,10 @@ def plot_attention_maps(
         axis.set_yticks([])
     if title:
         figure.suptitle(title, fontsize=10)
-    figure.tight_layout()
+        title_inches = 0.25 * (title.count("\n") + 1) + 0.15
+        figure.tight_layout(rect=(0, 0, 1, 1 - title_inches / figure.get_figheight()))
+    else:
+        figure.tight_layout()
     figure.savefig(path, dpi=150)
     return figure
 
@@ -188,7 +191,7 @@ def plot_class_counts(counts: dict[str, dict[str, int]], path: Path) -> Figure:
     axis.set_xticks(range(len(class_names)), labels=class_names, rotation=45, ha="right")
     axis.set_xlabel("Classe")
     axis.set_ylabel("Número de amostras")
-    axis.legend()
+    axis.legend(loc="upper left", bbox_to_anchor=(1.01, 1.0), borderaxespad=0)
     figure.tight_layout()
     figure.savefig(path, dpi=150)
     return figure
@@ -319,8 +322,9 @@ def plot_gan_diversity(
         axis.set_title(class_name)
         axis.set_xlabel("Época")
         axis.set_ylabel("Diversidade (diferença média de pixels)")
-        axis.legend(fontsize=7)
-    figure.tight_layout()
+    handles, labels = axes[0][0].get_legend_handles_labels()
+    figure.legend(handles, labels, loc="lower center", ncol=len(labels), fontsize=8)
+    figure.tight_layout(rect=(0, 0.08, 1, 1))
     figure.savefig(path, dpi=150)
     return figure
 
@@ -365,7 +369,8 @@ def plot_sample_rows(rows: dict[str, Tensor], path: Path) -> Figure:
 def plot_arm_metric(
     summaries: dict[str, list[dict]], class_names: list[str], title: str, path: Path
 ) -> Figure:
-    """Draws grouped bars of a per-class metric, one bar for each arm, with standard deviation as error bars.
+    """Draws grouped bars of a per-class metric, one bar for each arm, with standard deviation as error bars
+    and one black point for each run over its bar.
 
     ``summaries`` maps an arm to the output of ``summarise_runs``.
     """
@@ -384,9 +389,12 @@ def plot_arm_metric(
             capsize=4,
             label=arm,
         )
+        for offset, row in zip(offsets, summaries[arm]):
+            values = row.get("values", [])
+            axis.scatter([offset] * len(values), values, color="black", s=14, zorder=3)
     axis.set_xticks(range(len(class_names)), labels=class_names)
     axis.set_ylim(0, 1.05)
-    axis.set_ylabel("Revocação")
+    axis.set_ylabel("Recall")
     axis.set_title(title, fontsize=10)
     axis.legend(fontsize=8)
     figure.tight_layout()

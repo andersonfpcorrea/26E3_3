@@ -116,6 +116,29 @@ def test_plot_attention_maps_accepts_panel_titles_and_a_figure_title(tmp_path):
     assert figure.get_suptitle() == "Cada painel tem sua própria escala de cores"
 
 
+def test_plot_attention_maps_title_clears_the_panel_headings(tmp_path):
+    """The figure title does not touch the headings of the top row of panels."""
+    images = torch.randint(0, 256, (6, 3, 16, 16), dtype=torch.uint8)
+    maps = torch.rand(6, 1, 4, 4)
+    figure = plot_attention_maps(
+        images,
+        maps,
+        ["real: x\nprevisto: y"] * 6,
+        tmp_path / "attention.png",
+        title="Atenção do token de classe\nno primeiro bloco\n(escala de cores própria\nem cada painel)",
+        panel_titles=["Média das cabeças"],
+    )
+    title_box = window_box(figure, figure._suptitle)
+    headings = [window_box(figure, axis.title) for axis in figure.axes[:2]]
+    assert not any(title_box.overlaps(heading) for heading in headings)
+
+
+def window_box(figure, artist):
+    """Returns the pixel bounding box of an artist after drawing the figure."""
+    figure.canvas.draw()
+    return artist.get_window_extent(figure.canvas.get_renderer())
+
+
 def test_plot_attention_maps_has_no_figure_title_by_default(tmp_path):
     """Without a title argument the figure carries no overall title."""
     images = torch.randint(0, 256, (1, 3, 16, 16), dtype=torch.uint8)
@@ -151,6 +174,17 @@ def test_plot_group_accuracy_has_no_tick_past_one(tmp_path):
     assert axis.get_xlim()[1] > 1.0
 
 
+def test_plot_group_accuracy_ticks_run_from_zero_to_one_with_many_groups(tmp_path):
+    """The ticks cover 0 to 1 whatever the number of groups."""
+    entries = [{"group": f"g{index}", "count": 5, "accuracy": 0.5, "mean_distance": 1.0} for index in range(8)]
+    figure = plot_group_accuracy(entries, tmp_path / "groups.png", "Por estilo")
+    axis = figure.axes[0]
+    ticks = list(axis.get_xticks())
+    assert ticks[0] == 0
+    assert ticks[-1] == 1.0
+    assert float(axis.get_xticklabels()[-1].get_text()) == 1.0
+
+
 def test_plot_group_accuracy_lists_largest_group_on_top(tmp_path):
     """The first entry is drawn at the top of the chart."""
     figure = plot_group_accuracy(ENTRIES, tmp_path / "groups.png", "Por estilo")
@@ -177,6 +211,19 @@ COUNTS = {
     "validação": {"bike": 5, "car": 4},
     "teste": {"bike": 6, "car": 7},
 }
+
+
+def test_plot_class_counts_legend_covers_no_bar(tmp_path):
+    """The legend sits clear of every bar of the chart."""
+    counts = {
+        "treino": {"a": 100, "b": 100, "c": 100},
+        "validação": {"a": 20, "b": 18, "c": 16},
+        "teste": {"a": 20, "b": 18, "c": 16},
+    }
+    figure = plot_class_counts(counts, tmp_path / "counts.png")
+    axis = figure.axes[0]
+    legend_box = window_box(figure, axis.get_legend())
+    assert not any(legend_box.overlaps(window_box(figure, patch)) for patch in axis.patches)
 
 
 def test_plot_class_counts_draws_one_bar_per_class_and_split(tmp_path):
@@ -279,6 +326,19 @@ def test_plot_gan_diversity_draws_every_seed_and_the_mean_for_each_version(tmp_p
     assert len({line.get_color() for line in figure.axes[0].lines[:3]}) == 1
 
 
+def test_plot_gan_diversity_legend_covers_neither_curves_nor_the_real_line(tmp_path):
+    """One shared legend sits outside every panel, so it hides no line."""
+    seeds = [{0: [0.1, 0.3, 0.4], 1: [0.1, 0.25, 0.2]}]
+    figure = plot_gan_diversity(
+        {"v1": seeds, "v2": seeds}, {0: 0.3, 1: 0.25}, ["Normal", "COVID-19"], tmp_path / "diversity.png"
+    )
+    assert len(figure.legends) == 1
+    legend_box = window_box(figure, figure.legends[0])
+    assert not any(legend_box.overlaps(window_box(figure, axis)) for axis in figure.axes)
+    assert [text.get_text() for text in figure.legends[0].get_texts()][-1] == "Imagens reais"
+    assert all(axis.get_legend() is None for axis in figure.axes)
+
+
 def test_plot_gan_snapshots_draws_one_panel_per_epoch(tmp_path):
     """Snapshots are drawn in epoch order, each panel titled with its epoch."""
     figure = plot_gan_snapshots(GAN_HISTORY["snapshots"], tmp_path / "snapshots.png", "Titulo")
@@ -308,3 +368,24 @@ def test_plot_arm_metric_draws_a_bar_per_class_and_arm_with_error_bars(tmp_path)
     assert heights == [0.5, 0.6, 0.8, 0.9]
     assert [label.get_text() for label in axis.get_xticklabels()] == ["Normal", "COVID-19"]
     assert axis.get_title() == "Titulo"
+
+
+def test_plot_arm_metric_labels_the_axis_recall_and_draws_each_seed_point(tmp_path):
+    """Per-seed values are drawn as points over their bar and the axis says Recall."""
+    summaries = {
+        "A": [
+            {"class": 0, "mean": 0.9, "std": 0.01, "values": [0.89, 0.9, 0.91]},
+            {"class": 1, "mean": 0.5, "std": 0.1, "values": [0.4, 0.5, 0.6]},
+        ],
+        "B": [
+            {"class": 0, "mean": 0.8, "std": 0.02, "values": [0.78, 0.8, 0.82]},
+            {"class": 1, "mean": 0.6, "std": 0.2, "values": [0.4, 0.6, 0.8]},
+        ],
+    }
+    figure = plot_arm_metric(summaries, ["Normal", "COVID-19"], "Titulo", tmp_path / "arms.png")
+    axis = figure.axes[0]
+    assert axis.get_ylabel() == "Recall"
+    points = [collection for collection in axis.collections if len(collection.get_offsets()) == 3]
+    assert len(points) == 4
+    plotted = sorted(round(float(y), 2) for collection in points for _, y in collection.get_offsets())
+    assert plotted == sorted([0.89, 0.9, 0.91, 0.4, 0.5, 0.6, 0.78, 0.8, 0.82, 0.4, 0.6, 0.8])

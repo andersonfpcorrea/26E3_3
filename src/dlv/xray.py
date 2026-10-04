@@ -190,7 +190,7 @@ def summarise_runs(reports: list[list[dict]], metric: str) -> list[dict]:
 
     ``reports`` holds one ``class_report`` result per run. Returns, in class
     order, a dict with the class index, the mean and the sample standard
-    deviation of the metric. A single run has a standard deviation of 0.0.
+    deviation of the metric, and the list of its values in run order. A single run has a standard deviation of 0.0.
     Raises ValueError for no reports, reports with different class counts, or
     a metric name the reports do not hold.
     """
@@ -204,7 +204,7 @@ def summarise_runs(reports: list[list[dict]], metric: str) -> list[dict]:
     for position in range(len(reports[0])):
         values = [report[position][metric] for report in reports]
         spread = stdev(values) if len(values) > 1 else 0.0
-        summary.append({"class": position, "mean": fmean(values), "std": spread})
+        summary.append({"class": position, "mean": fmean(values), "std": spread, "values": values})
     return summary
 
 

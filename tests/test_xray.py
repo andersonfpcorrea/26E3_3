@@ -198,7 +198,7 @@ def test_summarise_runs_mean_and_std():
 def test_summarise_runs_single_run_has_zero_std():
     """One run has nothing to vary against."""
     report = [{"recall": 0.4, "precision": 0.4, "f1": 0.4, "support": 1}]
-    assert summarise_runs([report], "recall") == [{"class": 0, "mean": 0.4, "std": 0.0}]
+    assert summarise_runs([report], "recall") == [{"class": 0, "mean": 0.4, "std": 0.0, "values": [0.4]}]
 
 
 def test_listing_finds_class_folders_under_wrapper_parent(tmp_path):
@@ -383,3 +383,9 @@ def test_xray_batches_shuffle_visits_every_image_once():
     labels = torch.cat([batch_labels for _, batch_labels in batches]).tolist()
     assert sorted(labels) == list(range(10))
     assert labels != list(range(10))
+
+
+def test_summarise_runs_keeps_the_value_of_every_run():
+    """Each summary row lists the metric of every run in report order."""
+    reports = [[{"recall": value, "precision": 0.0, "f1": 0.0, "support": 1}] for value in (0.5, 0.7, 0.9)]
+    assert summarise_runs(reports, "recall")[0]["values"] == [0.5, 0.7, 0.9]
