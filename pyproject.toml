@@ -17,7 +17,7 @@ dependencies = [
 
 [dependency-groups]
 dev = ["pytest>=8.3", "nbformat>=5.10"]
-report = ["markdown>=3.6", "xhtml2pdf>=0.2.16"]
+report = ["markdown>=3.6", "xhtml2pdf>=0.2.16", "pypdf>=5.0"]
 
 [build-system]
 requires = ["setuptools>=68"]

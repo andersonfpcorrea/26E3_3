@@ -3,41 +3,92 @@
 Sections live in ``report/secoes`` and are joined in filename order, so the
 numeric prefixes define the structure of the document. The toolchain is pure
 Python: ``markdown`` for HTML and ``xhtml2pdf`` for the PDF.
+
+Image sizes keep each file's aspect ratio. The width follows a rule on the
+width to height ratio of the file: a strip at least 2.4 times wider than tall
+(multi-panel curves, image grids) takes the full text width, and any other
+figure (single charts, confusion matrices) takes two thirds of it. A figure
+taller than the page limit shrinks until it fits. To override the rule, write
+the width in points after the image in the Markdown line, for example
+``![caption](figures/a.png){: width="499"}``; the height still follows the
+file's ratio. Headings are kept on the same page as the block that follows.
 """
 
 import re
 from pathlib import Path
 
 from markdown import markdown
+from PIL import Image
 from xhtml2pdf import pisa
+from xhtml2pdf.config.resources import ResourceAccessPolicy, use_policy
 
 ROOT = Path(__file__).resolve().parent.parent
 REPORT_DIR = ROOT / "report"
 SECTIONS_DIR = REPORT_DIR / "secoes"
 OUTPUT_PDF = REPORT_DIR / "anderson_correa_deep-learning-and-vision_computer-vision.pdf"
 
+FULL_WIDTH = 499
+SINGLE_WIDTH = 333
+MAX_HEIGHT = 700
+STRIP_RATIO = 2.4
+
 CSS = """
 @page { size: a4 portrait; margin: 1.7cm; }
 body { font-family: Helvetica, Arial, sans-serif; font-size: 10pt;
        line-height: 1.45; color: #1a1a1a; }
-h1 { font-size: 19pt; color: #0a2540; margin-top: 0.2cm; }
+h1 { font-size: 19pt; color: #0a2540; margin-top: 0.2cm; -pdf-keep-with-next: true; }
 h2 { font-size: 14pt; color: #0a2540; border-bottom: 1px solid #c8d2e0;
-     padding-bottom: 3px; margin-top: 0.7cm; }
-h3 { font-size: 11.5pt; color: #14457a; margin-top: 0.5cm; }
+     padding-bottom: 3px; margin-top: 0.7cm; -pdf-keep-with-next: true; }
+h3 { font-size: 11.5pt; color: #14457a; margin-top: 0.5cm; -pdf-keep-with-next: true; }
 p, li { text-align: left; }
 code { font-family: Courier, monospace; background: #f2f4f7; font-size: 9pt; }
-table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 8.5pt; }
+table { width: 100%; margin: 8px 0; font-size: 8.5pt; }
 th, td { border: 1px solid #b8c2d0; padding: 3px 6px; }
 th { background: #e8edf4; }
 img { margin: 6px 0; }
 """
 
 
-def resolve_link(uri: str, _relative: str) -> str:
-    """Resolves image paths written relative to the report folder."""
+def resolve_link(uri: str, base_dir: Path) -> str:
+    """Resolves an image path written relative to ``base_dir``; URLs pass through unchanged."""
     if uri.startswith(("http://", "https://", "data:")):
         return uri
-    return str((REPORT_DIR / uri).resolve())
+    return str((Path(base_dir) / uri).resolve())
+
+
+def figure_size(
+    pixel_width: int, pixel_height: int, explicit_width: int | None = None
+) -> tuple[int, int]:
+    """Returns the width and height in points of a figure, keeping its aspect ratio.
+
+    An ``explicit_width`` is used as given. Otherwise strips with a width to
+    height ratio of at least ``STRIP_RATIO`` take ``FULL_WIDTH`` and other
+    figures ``SINGLE_WIDTH``. The height never exceeds ``MAX_HEIGHT``; a taller
+    figure is narrowed until it fits.
+    """
+    ratio = pixel_width / pixel_height
+    width = explicit_width or (FULL_WIDTH if ratio >= STRIP_RATIO else SINGLE_WIDTH)
+    if width / ratio > MAX_HEIGHT:
+        return int(MAX_HEIGHT * ratio), MAX_HEIGHT
+    return width, round(width / ratio)
+
+
+def size_images(html: str, base_dir: Path) -> str:
+    """Gives every image tag a width and height from its file, honouring a width already set."""
+
+    def sized(match: re.Match) -> str:
+        """Rewrites one image tag."""
+        tag = match.group(0)
+        source = re.search(r'src="([^"]+)"', tag).group(1)
+        explicit = re.search(r'width="(\d+)"', tag)
+        tag = re.sub(r'\s(width|height)="[^"]*"', "", tag)
+        with Image.open(resolve_link(source, base_dir)) as image:
+            width, height = figure_size(
+                image.width, image.height, int(explicit.group(1)) if explicit else None
+            )
+        return tag.replace("<img ", f'<img width="{width}" height="{height}" ', 1)
+
+    return re.sub(r"<img [^>]*>", sized, html)
 
 
 def merge_sections(sections_dir: Path) -> str:
@@ -49,19 +100,34 @@ def merge_sections(sections_dir: Path) -> str:
     return "\n\n---\n\n".join(parts) + "\n"
 
 
-def build(sections_dir: Path, output_pdf: Path) -> None:
-    """Renders the merged sections into one PDF file."""
+def render_html(sections_dir: Path) -> str:
+    """Renders the merged sections into one HTML page, with images sized from their files.
+
+    Image paths in the sections are relative to the parent of ``sections_dir``.
+    """
+    sections_dir = Path(sections_dir)
     body = markdown(
         merge_sections(sections_dir),
-        extensions=["tables", "fenced_code", "sane_lists"],
+        extensions=["tables", "fenced_code", "sane_lists", "attr_list"],
     )
-    body = re.sub(r"<img ", '<img width="420" ', body)
-    html = (
+    body = size_images(body.replace("<table>", '<table cellspacing="0">'), sections_dir.parent)
+    return (
         "<html><head><meta charset='utf-8'>"
         f"<style>{CSS}</style></head><body>{body}</body></html>"
     )
-    with open(output_pdf, "wb") as handle:
-        result = pisa.CreatePDF(html, dest=handle, link_callback=resolve_link, encoding="utf-8")
+
+
+def build(sections_dir: Path, output_pdf: Path) -> None:
+    """Renders the merged sections into one PDF file."""
+    html = render_html(sections_dir)
+    report_dir = Path(sections_dir).resolve().parent
+    with open(output_pdf, "wb") as handle, use_policy(ResourceAccessPolicy(base_dir=report_dir)):
+        result = pisa.CreatePDF(
+            html,
+            dest=handle,
+            link_callback=lambda uri, _relative: resolve_link(uri, report_dir),
+            encoding="utf-8",
+        )
     if result.err:
         raise RuntimeError(f"PDF generation reported {result.err} error(s)")
 

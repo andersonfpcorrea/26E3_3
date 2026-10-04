@@ -289,7 +289,7 @@ Três foram testadas em execuções anteriores do notebook e saíram dele. Os n�
 - As geradas ficam um pouco mais longe do treino que as reais de validação. Parte dessa distância é ruído.
 - Segundo controle: balancear poderia aumentar a diversidade só por gerar ruído. A distância média por seed foi 0,143, 0,132 e 0,107 na versão 1 e 0,113, 0,108 e 0,138 na versão 2. A versão 2 não está mais longe das imagens reais que a versão 1.
 
-![Primeira linha: COVID-19 reais do treino. Demais linhas: imagens geradas por cada versão e seed](figures/a4_real_vs_synthetic.png)
+![Primeira linha: COVID-19 reais do treino. Demais linhas: imagens geradas por cada versão e seed](figures/a4_real_vs_synthetic.png){: width="499"}
 
 **O que se vê nas imagens**
 
