@@ -1,6 +1,7 @@
 """Class-conditional GAN for 64x64 grayscale images, its losses, training loop and two diagnostic measures."""
 
 from contextlib import contextmanager
+from math import isfinite
 
 import torch
 from torch import Tensor, nn
@@ -13,6 +14,9 @@ LOSS_KINDS = ("bce", "hinge")
 DIVERSITY_SAMPLES = 32
 DEFAULT_SNAPSHOT_PER_CLASS = 8
 SNAPSHOT_COLUMNS = 8
+DIAGNOSIS_WINDOW_SHARE = 0.1
+COLLAPSE_RATIO = 0.5
+DISCRIMINATOR_WIN_LOSS = 0.2
 
 
 def check_labels(labels: Tensor, num_classes: int) -> None:
@@ -389,3 +393,38 @@ def generate(generator: ConditionalGenerator, labels: Tensor, device, seed: int)
     noise_generator = torch.Generator().manual_seed(seed)
     noise = torch.randn(labels.shape[0], generator.latent_dim, generator=noise_generator)
     return sample_images(generator, noise.to(device), labels).cpu()
+
+
+def diagnose_gan(history: dict, real_diversity: dict[int, float]) -> dict:
+    """Reads the end of a GAN training history for the usual failure signs.
+
+    The window is the last tenth of the epochs, at least one. For every class
+    it compares the mean diversity of generated images in the window with
+    ``real_diversity``, the diversity of real images of that class, and
+    reports the ratio. A class whose ratio is under ``COLLAPSE_RATIO`` counts
+    as collapsed. The discriminator is winning when its mean loss in the
+    window is under ``DISCRIMINATOR_WIN_LOSS``, which leaves the generator
+    without a useful signal. Any loss that is not finite is flagged. Epoch 1
+    is left out of the window whenever there is more than one epoch, since
+    diversity read in evaluation mode is unreliable there.
+    """
+    epochs = len(history["discriminator_loss"])
+    window = max(1, round(DIAGNOSIS_WINDOW_SHARE * epochs))
+    last = slice(min(max(epochs - window, 1), epochs - 1), epochs)
+    final_diversity = {
+        index: sum(values[last]) / len(values[last]) for index, values in history["diversity"].items()
+    }
+    ratios = {index: final_diversity[index] / real_diversity[index] for index in final_diversity}
+    discriminator_final = sum(history["discriminator_loss"][last]) / len(history["discriminator_loss"][last])
+    generator_final = sum(history["generator_loss"][last]) / len(history["generator_loss"][last])
+    losses = history["discriminator_loss"] + history["generator_loss"]
+    return {
+        "window_epochs": len(history["discriminator_loss"][last]),
+        "final_diversity": final_diversity,
+        "diversity_ratio": ratios,
+        "collapsed_classes": [index for index, ratio in ratios.items() if ratio < COLLAPSE_RATIO],
+        "discriminator_loss_final": discriminator_final,
+        "generator_loss_final": generator_final,
+        "discriminator_wins": discriminator_final < DISCRIMINATOR_WIN_LOSS,
+        "non_finite_loss": any(not isfinite(value) for value in losses),
+    }

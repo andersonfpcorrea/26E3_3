@@ -10,6 +10,7 @@ from torch import nn
 from dlv.gan import (
     ConditionalDiscriminator,
     ConditionalGenerator,
+    diagnose_gan,
     discriminator_loss,
     generate,
     generator_loss,
@@ -385,3 +386,51 @@ def test_generate_rejects_out_of_range_label():
     """Asking for a class the generator does not know raises a clear error."""
     with pytest.raises(ValueError, match="labels must be in"):
         generate(small_generator(), torch.tensor([3]), DEVICE, seed=0)
+
+
+def fake_history(epochs, discriminator=1.0, generator=1.0, diversity=(0.2, 0.2, 0.2)):
+    """Builds a constant training history with the given final loss and diversity values."""
+    return {
+        "discriminator_loss": [discriminator] * epochs,
+        "generator_loss": [generator] * epochs,
+        "diversity": {index: [value] * epochs for index, value in enumerate(diversity)},
+    }
+
+
+def test_diagnose_gan_flags_a_collapsed_class_by_its_ratio_to_real_diversity():
+    """A class whose generated diversity is under half of the real one counts as collapsed."""
+    history = fake_history(20, diversity=(0.2, 0.01, 0.15))
+    found = diagnose_gan(history, {0: 0.2, 1: 0.2, 2: 0.2})
+    assert found["collapsed_classes"] == [1]
+    assert found["diversity_ratio"][2] == pytest.approx(0.75)
+    assert found["final_diversity"][0] == pytest.approx(0.2)
+
+
+def test_diagnose_gan_reads_only_the_last_tenth_of_the_epochs():
+    """Early values do not change the result, and epoch 1 is never inside the window."""
+    history = fake_history(20, discriminator=1.0)
+    history["discriminator_loss"][0] = 50.0
+    history["diversity"][0][0] = 0.0
+    history["diversity"][0][5] = 0.0
+    found = diagnose_gan(history, {0: 0.2, 1: 0.2, 2: 0.2})
+    assert found["window_epochs"] == 2
+    assert found["discriminator_loss_final"] == pytest.approx(1.0)
+    assert found["collapsed_classes"] == []
+
+
+def test_diagnose_gan_flags_a_winning_discriminator_and_non_finite_losses():
+    """A near-zero discriminator loss and a NaN anywhere are reported."""
+    real = {0: 0.2, 1: 0.2, 2: 0.2}
+    assert diagnose_gan(fake_history(20, discriminator=0.05), real)["discriminator_wins"] is True
+    assert diagnose_gan(fake_history(20, discriminator=1.0), real)["discriminator_wins"] is False
+    history = fake_history(20)
+    history["generator_loss"][3] = float("nan")
+    assert diagnose_gan(history, real)["non_finite_loss"] is True
+    assert diagnose_gan(fake_history(20), real)["non_finite_loss"] is False
+
+
+def test_diagnose_gan_works_on_a_single_epoch_history():
+    """A history with one epoch still gives a result from that epoch."""
+    found = diagnose_gan(fake_history(1), {0: 0.2, 1: 0.2, 2: 0.2})
+    assert found["window_epochs"] == 1
+    assert found["discriminator_loss_final"] == pytest.approx(1.0)
