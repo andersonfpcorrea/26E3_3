@@ -194,3 +194,15 @@ def describe_tokens(tokenizer, texts: list[str]) -> list[dict]:
         }
         for ids, mask in zip(encoded["input_ids"], encoded["attention_mask"])
     ]
+
+
+def sample_in_band(values: Tensor, low: float, high: float, count: int, seed: int) -> list[int]:
+    """Draws a seeded random sample of the indices whose value lies in ``[low, high)``.
+
+    Returns fewer than ``count`` indices when the band holds fewer values, and
+    an empty list when it holds none. The same seed gives the same sample.
+    """
+    inside = ((values >= low) & (values < high)).nonzero().flatten()
+    generator = torch.Generator().manual_seed(seed)
+    order = torch.randperm(inside.shape[0], generator=generator)
+    return inside[order][:count].tolist()

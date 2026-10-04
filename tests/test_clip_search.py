@@ -14,6 +14,7 @@ from dlv.clip_search import (
     embed_texts,
     list_ads16_images,
     rank_concepts,
+    sample_in_band,
     search,
     similarity_matrix,
     top_images,
@@ -330,3 +331,23 @@ def test_cached_reuses_matching_rows_and_ignores_none(tmp_path):
     cached(path, lambda: torch.zeros(3, 2))
     assert cached(path, lambda: torch.ones(9, 2), expected_rows=3).shape == (3, 2)
     assert cached(path, lambda: torch.ones(9, 2), expected_rows=None).shape == (3, 2)
+
+
+def test_sample_in_band_keeps_only_values_in_the_half_open_band():
+    """Every index drawn has a value at or above the low edge and below the high edge."""
+    values = torch.tensor([0.1, 0.45, 0.5, 0.52, 0.55, 0.6, 0.9])
+    assert sorted(sample_in_band(values, 0.5, 0.6, 10, seed=0)) == [2, 3, 4]
+
+
+def test_sample_in_band_is_reproducible_and_capped_at_count():
+    """The same seed gives the same sample, which never exceeds ``count``."""
+    values = torch.linspace(0, 1, 100)
+    first = sample_in_band(values, 0.2, 0.8, 5, seed=3)
+    assert first == sample_in_band(values, 0.2, 0.8, 5, seed=3)
+    assert len(first) == 5
+    assert all(0.2 <= values[i] < 0.8 for i in first)
+
+
+def test_sample_in_band_returns_nothing_for_an_empty_band():
+    """A band with no values gives an empty list."""
+    assert sample_in_band(torch.tensor([0.1, 0.9]), 0.4, 0.6, 3, seed=0) == []
