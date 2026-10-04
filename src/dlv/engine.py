@@ -12,18 +12,20 @@ def train_all(model: nn.Module) -> None:
 
 
 def run_epoch(
-    model, loader, device, optimizer=None, scheduler=None, use_amp: bool = False
+    model, loader, device, optimizer=None, scheduler=None, use_amp: bool = False, scaler=None
 ) -> tuple[float, float]:
     """Runs one pass over a loader and returns mean loss and accuracy.
 
     The model is updated only when an optimizer is given. An empty loader
     yields zeros. The scheduler, when given, is stepped once per training
     batch. ``use_amp`` turns on mixed precision with gradient scaling on CUDA
-    and does nothing on other devices.
+    and does nothing on other devices. Pass a ``scaler`` to keep one gradient
+    scale across epochs; without it a new one is made for this pass.
     """
     training = optimizer is not None
     amp_enabled = use_amp and device.type == "cuda"
-    scaler = GradScaler(device.type, enabled=amp_enabled)
+    if scaler is None:
+        scaler = GradScaler(device.type, enabled=amp_enabled)
     total_loss = 0.0
     correct = 0
     count = 0
@@ -64,10 +66,11 @@ def fit(
     keep a frozen backbone in evaluation mode. ``scheduler`` and ``use_amp``
     are passed to every training pass.
     """
+    scaler = GradScaler(device.type, enabled=use_amp and device.type == "cuda")
     history = {"train_loss": [], "train_accuracy": [], "val_loss": [], "val_accuracy": []}
     for epoch in range(epochs):
         set_train_mode(model)
-        train_loss, train_accuracy = run_epoch(model, train_loader, device, optimizer, scheduler, use_amp)
+        train_loss, train_accuracy = run_epoch(model, train_loader, device, optimizer, scheduler, use_amp, scaler)
         model.eval()
         val_loss, val_accuracy = run_epoch(model, validation_loader, device, use_amp=use_amp)
         history["train_loss"].append(train_loss)
@@ -82,12 +85,13 @@ def fit(
     return history
 
 
-def evaluate(model, loader, device, num_classes: int) -> dict:
+def evaluate(model, loader, device, num_classes: int, use_amp: bool = False) -> dict:
     """Measures overall accuracy, accuracy per class and the confusion matrix.
 
     Confusion rows are true classes and columns are predicted classes. The
     predicted and true classes of every sample are also returned as lists of
-    ints in loader order.
+    ints in loader order. ``use_amp`` runs the forward pass in mixed precision
+    on CUDA and does nothing on other devices.
     """
     model.eval()
     all_predictions = []
@@ -95,7 +99,9 @@ def evaluate(model, loader, device, num_classes: int) -> dict:
     confusion = torch.zeros(num_classes, num_classes, dtype=torch.long)
     with torch.no_grad():
         for images, labels in loader:
-            predictions = model(images.to(device)).argmax(dim=1).cpu()
+            with autocast(device.type, enabled=use_amp and device.type == "cuda"):
+                logits = model(images.to(device))
+            predictions = logits.argmax(dim=1).cpu()
             for truth, prediction in zip(labels.tolist(), predictions.tolist()):
                 confusion[truth, prediction] += 1
                 all_targets.append(truth)

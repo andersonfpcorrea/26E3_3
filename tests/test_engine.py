@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 import pytest
 
+from dlv import engine
 from dlv.engine import evaluate, fit, macro_f1, mean_class_distance, run_epoch
 
 
@@ -144,7 +145,7 @@ def test_macro_f1_is_one_for_a_perfect_matrix():
 
 
 def test_mean_class_distance_averages_index_gaps_over_all_samples():
-    """Two samples miss by two classes and two by one class over four samples gives 1.5."""
+    """Three samples miss by two classes and one is correct, so the first matrix gives 6 / 4 = 1.5."""
     assert mean_class_distance([[1, 0, 2], [0, 0, 0], [1, 0, 0]]) == pytest.approx(1.5)
     assert mean_class_distance([[2, 1], [0, 1]]) == pytest.approx(0.25)
 
@@ -152,3 +153,34 @@ def test_mean_class_distance_averages_index_gaps_over_all_samples():
 def test_mean_class_distance_of_an_empty_matrix_is_zero():
     """With no samples the distance is zero."""
     assert mean_class_distance([[0, 0], [0, 0]]) == 0.0
+
+
+def test_evaluate_with_amp_requested_on_cpu_matches_full_precision():
+    """Mixed precision in evaluation is a no-op on CPU."""
+    torch.manual_seed(0)
+    model = nn.Linear(2, 2)
+    loader = DataLoader(separable_loader().dataset, batch_size=16, shuffle=False)
+    plain = evaluate(model, loader, torch.device("cpu"), num_classes=2)
+    amp = evaluate(model, loader, torch.device("cpu"), num_classes=2, use_amp=True)
+    assert plain == amp
+
+
+def test_fit_shares_one_gradient_scaler_across_epochs(monkeypatch):
+    """The same scaler object reaches every training pass of a fit call."""
+    seen = []
+    real = engine.run_epoch
+
+    def recording(model, loader, device, optimizer=None, scheduler=None, use_amp=False, scaler=None):
+        """Records the scaler and delegates to the real pass."""
+        if optimizer is not None:
+            seen.append(scaler)
+        return real(model, loader, device, optimizer, scheduler, use_amp, scaler)
+
+    monkeypatch.setattr(engine, "run_epoch", recording)
+    model = nn.Linear(2, 2)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
+    loader = separable_loader()
+    fit(model, loader, loader, optimizer, epochs=3, device=torch.device("cpu"), use_amp=True)
+    assert len(seen) == 3
+    assert seen[0] is not None
+    assert seen[0] is seen[1] is seen[2]
