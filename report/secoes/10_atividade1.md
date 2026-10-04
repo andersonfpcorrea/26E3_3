@@ -25,7 +25,7 @@
 | 1950 em diante | 14.046 | 2.000 |
 | Total | 76.881 | 16.000 |
 
-- Os períodos antigos são mais largos porque têm menos pinturas. O primeiro cobre séculos. Os do meio cobrem 25 anos cada.
+- Os períodos antigos são mais largos porque têm menos pinturas. O primeiro cobre séculos, o segundo 200 anos e o terceiro 50. Os quatro seguintes cobrem 25 anos cada.
 - A amostra é balanceada: 2.000 pinturas por período, sorteadas com seed 42. São 16.000 pinturas, 20,8% das que têm ano.
 - Com 8 classes do mesmo tamanho, um chute ao acaso acerta 12,5%.
 
@@ -82,7 +82,7 @@ Tudo está em `src/dlv/attention.py`, escrito com camadas lineares e softmax. Os
 - O módulo tem 3 x 3 + 1 = 10 camadas lineares: uma por head e por papel, mais a projeção final.
 - Mudar as projeções de uma head muda só os pesos dessa head. As outras duas ficam idênticas. Isso prova que as projeções são independentes.
 - Com as últimas projeções zeradas, o bloco devolve a própria entrada. Isso prova que as residual connections existem.
-- O gradiente chega a todos os parâmetros do bloco.
+- O gradiente chega a todos os parâmetros do bloco, menos aos vieses das projeções de key. O gradiente deles é zero por construção, porque o softmax ignora uma constante somada à linha.
 
 ### Vision Transformer
 
@@ -141,25 +141,25 @@ O modelo está em `src/dlv/vit.py`, classe `VisionTransformer`. O caminho da ima
 **ViT treinado do zero (com e sem posição)**
 
 - **Entrada de 64x64 e patch de 8x8.** Dá 65 tokens, o que deixa o treino rápido na T4: cerca de 7 segundos por época. As imagens reduzidas cabem na memória da GPU.
-- **192 dimensões, 6 blocos, 3 heads.** Um modelo pequeno, de 2,7 milhões de parâmetros, para 11.200 imagens de treino. São 243 parâmetros por imagem. Um modelo maior teria ainda mais overfitting.
+- **192 dimensões, 6 blocos, 3 heads.** Um modelo pequeno, de 2,7 milhões de parâmetros, para 11.200 imagens de treino. São 243 parâmetros por imagem. Um modelo maior tenderia a ter ainda mais overfitting.
 - **AdamW, weight decay 0,05.** É o otimizador usual para Transformers. O weight decay é a regularização principal.
 - **Taxa de aprendizado 0,001, com 5 épocas de subida linear e depois queda em cosseno.** Transformers treinados do zero são instáveis no começo. A subida gradual evita passos grandes enquanto os pesos ainda são aleatórios.
 - **Lotes de 256 imagens.** São 44 passos por época.
 - **Augmentation: recorte aleatório com margem de 4 pixels e flip horizontal.** São leves e não mudam as cores, que são pista de período.
 - **Normalização com a média e o desvio padrão de cada canal, medidos no treino.**
 - **Dropout 0,1. Perda: entropia cruzada. Seed 42.**
-- **40 épocas.** A primeira execução usou 60 épocas e levou 27,7 minutos no total, perto do limite de 30 minutos do notebook. O corte para 40 foi por custo. Pela validação, não custou acurácia: a melhor acurácia de validação aparece na época 27 (32,2%) e a curva fica parada daí até a época 40 (31,4%).
+- **40 épocas.** A primeira execução usou 60 épocas e levou 27,7 minutos no total, perto do limite de 30 minutos do notebook. O corte para 40 foi por custo. Nessa primeira execução, a acurácia de validação era 32,9% na época 40 e 32,0% na época 60. Na execução final, a melhor acurácia de validação (32,2%) aparece na época 27, e a época 40 fica em 31,4%. As duas execuções usam agendas de taxa de aprendizado diferentes, então a comparação é indicativa.
 
 **ViT-B/16 pré-treinado**
 
 - **Pesos `IMAGENET1K_V1` do torchvision.** O modelo tem 85.804.808 parâmetros.
 - **Classification head trocada.** A camada final, de 1.000 saídas, deu lugar a uma camada linear nova de 8 saídas.
-- **Fine-tuning de todas as camadas.** Pinturas são um domínio distante das fotos da ImageNet, e há 11.200 imagens de treino. Congelar o backbone, como na Atividade 3, deixaria as features presas às fotos.
+- **Fine-tuning de todas as camadas.** Pinturas são um domínio distante das fotos da ImageNet, e há 11.200 imagens de treino. Congelar o backbone, como na Atividade 3, poderia deixar as features presas às fotos.
 - **Duas taxas de aprendizado: 0,00003 no backbone e 0,001 na camada nova.** A camada nova começa aleatória e precisa de passos grandes. O backbone já está treinado, e passos grandes apagariam o que ele sabe.
 - **Entrada igual à do pré-treinamento:** redimensionar para 256, recorte central de 224x224, média e desvio padrão da ImageNet.
 - **Lotes de 32 imagens e precisão mista.** Mantêm o pico de memória da GPU em 3.971,6 MB.
 - **Sem augmentation e com taxa de aprendizado constante.** Foi a configuração mais simples. É um limite: ver a análise crítica.
-- **2 épocas.** A primeira execução usou 3. O corte foi por custo. Pela validação, não custou acurácia: da época 1 para a 2, a acurácia de validação ficou parada (48,9% para 49,0%) e a perda de validação subiu (1,33 para 1,43). Uma terceira época tenderia a aumentar o overfitting.
+- **2 épocas.** A primeira execução usou 3. O corte foi por custo. Na primeira execução, com 3 épocas, a acurácia de validação foi 49,2% na época 2 e 47,8% na época 3. Na execução final, da época 1 para a 2, a acurácia de validação ficou parada (48,9% para 49,0%) e a perda de validação subiu (1,33 para 1,43). Uma terceira época tenderia a aumentar o overfitting.
 
 **Custo da execução final**
 
@@ -170,17 +170,17 @@ O modelo está em `src/dlv/vit.py`, classe `VisionTransformer`. O caminho da ima
 
 **Comparação dos três modelos no teste (2.400 pinturas)**
 
-| Modelo | Acurácia | Acertos | Erro de até 1 período | F1 macro | Distância média | Parâmetros | Treino |
+| Modelo | Acurácia | Acertos | Acerto com tolerância de 1 período | F1 macro | Distância média | Parâmetros | Treino |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| ViT do zero | 32,50% | 780 | 64,00% | 0,320 | 1,49 | 2.720.840 | 277,4 s |
-| ViT do zero sem posição | 32,46% | 779 | 64,46% | 0,322 | 1,47 | 2.708.360 | 280,1 s |
-| ViT-B/16 pré-treinado | 47,38% | 1.137 | 80,21% | 0,458 | 0,93 | 85.804.808 | 236,0 s |
-| Chute ao acaso | 12,50% | 300 | 34,38% | | 2,63 | | |
+| ViT do zero | 32,50% | 780 | 64,0% | 0,320 | 1,49 | 2.720.840 | 277,4 s |
+| ViT do zero sem posição | 32,46% | 779 | 64,5% | 0,322 | 1,47 | 2.708.360 | 280,1 s |
+| ViT-B/16 pré-treinado | 47,38% | 1.137 | 80,2% | 0,458 | 0,93 | 85.804.808 | 236,0 s |
+| Chute ao acaso | 12,50% | 300 | 34,4% | | 2,63 | | |
 
-- **Erro de até 1 período:** conta como acerto o período exato ou um vizinho.
+- **Acerto com tolerância de 1 período:** conta como acerto o período exato ou um vizinho.
 - **Distância média:** quantos períodos, em média, separam a previsão do período real.
 - **Linha do chute ao acaso:** valores calculados por conta, sem execução.
-    - Os 2 períodos das pontas têm 2 respostas aceitas e os outros 6 têm 3: (2 x 2 + 6 x 3) / 64 = 34,38%.
+    - Os 2 períodos das pontas têm 2 respostas aceitas e os outros 6 têm 3: (2 x 2 + 6 x 3) / 64 = 34,4%.
     - A distância média entre dois períodos sorteados é 168 / 64 = 2,63.
 - O modelo pré-treinado acerta 1.137 - 780 = 357 pinturas a mais que o ViT do zero: 14,9 pontos percentuais.
 - Os dois modelos do zero ficam cerca de 20 pontos acima do acaso. Eles aprendem algo, mas pouco.
@@ -199,29 +199,17 @@ O modelo está em `src/dlv/vit.py`, classe `VisionTransformer`. O caminho da ima
 | 1925 a 1949 | 16,0% | 21,7% | 56,3% |
 | 1950 em diante | 51,7% | 52,7% | 61,3% |
 
-- Os três modelos acertam mais nas pontas. Os períodos das pontas são os mais largos e os mais diferentes dos outros.
-- O modelo pré-treinado é pior que o do zero em um período: 1875 a 1899, com 28 acertos em 300 (9,3%), abaixo do acaso.
+- Os três modelos acertam mais nas pontas. São os períodos mais diferentes dos outros, e o primeiro é o mais largo.
 
 **Curvas de treino**
 
-| Modelo | Época | Perda treino | Perda validação | Acurácia treino | Acurácia validação |
-| --- | --- | --- | --- | --- | --- |
-| ViT do zero | 1 | 2,042 | 1,937 | 20,50% | 23,42% |
-| ViT do zero | 20 | 1,666 | 1,713 | 36,31% | 30,33% |
-| ViT do zero | 40 | 1,427 | 1,781 | 46,56% | 31,42% |
-| Sem posição | 1 | 2,023 | 1,954 | 20,93% | 23,75% |
-| Sem posição | 20 | 1,672 | 1,765 | 35,32% | 29,33% |
-| Sem posição | 40 | 1,464 | 1,808 | 45,21% | 30,29% |
-| ViT-B/16 pré-treinado | 1 | 1,408 | 1,332 | 45,73% | 48,88% |
-| ViT-B/16 pré-treinado | 2 | 0,866 | 1,431 | 67,71% | 49,04% |
-
 - **Os dois modelos do zero têm overfitting.**
-    - A acurácia de treino sobe até o fim: 46,56% e 45,21% na época 40.
+    - A acurácia de treino sobe até o fim: 46,6% e 45,2% na época 40.
     - A acurácia de validação para perto de 31%.
     - A perda de validação do ViT do zero tem o mínimo na época 20 (1,713) e sobe até 1,781. A de treino continua caindo.
     - Diferença final entre treino e validação no ViT do zero: 46,56% - 31,42% = 15,1 pontos.
-- **As curvas com e sem posição andam juntas** do início ao fim. A diferença entre elas é do tamanho da oscilação de uma época para outra.
-- **O modelo pré-treinado também tem overfitting, e mais rápido.** Na época 2 o treino chega a 67,71% e a validação fica em 49,04%. A perda de validação sobe de 1,332 para 1,431.
+- **As curvas com e sem posição andam juntas** do início ao fim. A diferença entre elas é do tamanho da oscilação de uma época para outra. A diferença final na validação, 31,4% com posição e 30,3% sem, está dentro do ruído.
+- **O modelo pré-treinado também tem overfitting, e mais rápido.** Na época 2 o treino chega a 67,7% e a validação fica em 49,0%. A perda de validação sobe de 1,332 para 1,431.
 - Os pesos avaliados no teste são os da última época, nos três modelos. Não houve escolha da melhor época pela validação.
 
 ![Curvas de perda e acurácia por época dos três modelos](figures/a1_histories.png)
@@ -241,7 +229,7 @@ O modelo está em `src/dlv/vit.py`, classe `VisionTransformer`. O caminho da ima
     - 1900 a 1924 perde 102 para 1925 a 1949, mais do que acerta (101).
     - 1950 em diante perde 80 para 1925 a 1949.
     - "até 1599" é quase resolvido: 269 de 300.
-- **O buraco em 1875 a 1899.** Das 300 pinturas desse período, o modelo pré-treinado acerta 28, manda 94 para 1850 a 1874 e 96 para 1900 a 1924. No teste inteiro, ele só responde "1875 a 1899" 64 vezes em 2.400. O modelo quase não usa essa classe e divide as pinturas dela entre os dois vizinhos. Como os erros caem nos vizinhos, a métrica de 1 período de tolerância esconde esse defeito. A acurácia por período mostra.
+- **O buraco em 1875 a 1899.** Das 300 pinturas desse período, o modelo pré-treinado acerta 28 (9,3%, abaixo do acaso e pior que os 28,0% do ViT do zero), manda 94 para 1850 a 1874 e 96 para 1900 a 1924. No teste inteiro, ele só responde "1875 a 1899" 64 vezes em 2.400. O modelo quase não usa essa classe e divide as pinturas dela entre os dois vizinhos. Como os erros caem nos vizinhos, a métrica de 1 período de tolerância esconde esse defeito. A acurácia por período mostra.
 
 ![Matriz de confusão do ViT do zero no teste](figures/a1_confusion_scratch.png)
 
@@ -262,56 +250,41 @@ O modelo está em `src/dlv/vit.py`, classe `VisionTransformer`. O caminho da ima
 
 **Último bloco, pintura por pintura**
 
-1. **The Nymph of the Spring, Lucas Cranach, 1540 (acerto).**
-    - Head 1: canto inferior direito, com pontos fracos no canto superior direito e na borda esquerda.
-    - Head 2: um único ponto forte, sobre o quadril da figura deitada.
-    - Head 3: canto inferior esquerdo e borda esquerda.
-2. **Torso of a Dancer, Edgar Degas, 1899 (acerto).**
-    - Head 1: só o canto superior esquerdo, no fundo liso.
-    - Head 2: um ponto ao lado do rosto, na altura do queixo e do ombro.
-    - Head 3: base da imagem, no centro, e uma faixa difusa no alto à direita.
-3. **Pastorale, Ernst Wilhelm Nay, 1954 (acerto).**
-    - Head 1: base da imagem, sobre um disco verde.
-    - Head 2: borda esquerda, com uma faixa fraca que atravessa o centro.
-    - Head 3: borda esquerda, mais abaixo, e pontos menores à direita.
-    - A pintura é abstrata. Não há figura para a attention seguir.
-4. **Jane Maxwell com o filho, George Romney, 1778 (erro: previsto 1800 a 1849).**
-    - Head 1: ponto forte na área escura à esquerda da mulher, junto ao casaco do rapaz, e pontos mais fracos na parte de baixo do vestido.
-    - Head 2: um ponto no braço erguido da mulher, à direita.
-    - Head 3: canto superior direito e borda direita, no fundo.
-5. **Madame Gobillard, Edgar Degas, 1869 (erro: previsto 1900 a 1924).**
-    - Head 1: um ponto acima e à esquerda da cabeça, no fundo.
-    - Head 2: espalhada pela parede e pelas bordas, com um ponto no colo da figura.
-    - Head 3: parte de baixo do vestido, à direita.
-6. **Milking the Cow, Yasuo Kuniyoshi, 1927 (erro: previsto 1950 em diante).**
-    - Head 1: topo do desenho.
-    - Head 2: centro inferior do desenho, e difusa no papel branco.
-    - Head 3: difusa no papel branco, mais forte na borda direita e no canto inferior direito.
+| Pintura | Head 1 | Head 2 | Head 3 |
+| --- | --- | --- | --- |
+| 1. The Nymph of the Spring, Lucas Cranach, 1540 (acerto) | Cantos inferiores, mais forte no direito, com pontos fracos no canto superior direito e na borda esquerda | Um único ponto forte, sobre o quadril da figura deitada | Canto inferior esquerdo e borda esquerda |
+| 2. Torso of a Dancer, Edgar Degas, 1899 (acerto) | Só o canto superior esquerdo, no fundo liso | Um ponto ao lado do rosto, na altura do queixo e do ombro | Base da imagem, no centro, e faixa difusa no alto à direita |
+| 3. Pastorale, Ernst Wilhelm Nay, 1954 (acerto) | Base da imagem, sobre um disco verde | Borda esquerda, com faixa fraca que atravessa o centro | Borda esquerda, mais abaixo, e pontos menores à direita |
+| 4. Jane Maxwell com o filho, George Romney, 1778 (erro: previsto 1800 a 1849) | Ponto forte na área escura à esquerda da mulher, junto ao casaco do rapaz, e pontos mais fracos no vestido | Um ponto no braço erguido da mulher, à direita | Canto superior direito e borda direita, no fundo |
+| 5. Madame Gobillard, Edgar Degas, 1869 (erro: previsto 1900 a 1924) | Um ponto acima e à esquerda da cabeça, no fundo | Espalhada pela parede e pelas bordas, com um ponto no colo da figura | Parte de baixo do vestido, à direita |
+| 6. Milking the Cow, Yasuo Kuniyoshi, 1927 (erro: previsto 1950 em diante) | Topo do desenho | Centro inferior do desenho, e difusa no papel branco | Difusa no papel branco, mais forte na borda direita e no canto inferior direito |
+
+A pintura 3 é abstrata. Não há figura para a attention seguir.
 
 **Regiões que emergem**
 
 - **Head 2 cai mais vezes sobre a figura.** Quadril na pintura 1, rosto e ombro na 2, braço na 4, colo na 5, corpo do desenho na 6. É um ponto pequeno, de um ou dois patches, e muda de parte do corpo a cada pintura.
 - **Heads 1 e 3 caem mais vezes em cantos, bordas e fundo.** Cantos nas pinturas 1 e 2, borda esquerda na 3, canto e borda direita na 4 e na 6.
-- **O padrão não é estável.** Na pintura 3 a head 2 está na borda. Na pintura 5 a head 2 é a mais espalhada das três, e a head 3 é a que cai sobre o vestido. Seis pinturas é pouco para afirmar um papel fixo por head.
+- **O padrão não é estável.** Na pintura 3 a head 2 está na borda. Na pintura 5 a head 2 é a mais espalhada das três, e a head 3 é a que cai sobre o vestido. A head 1 cai sobre o casaco do rapaz na pintura 4 e sobre o desenho na 6. Seis pinturas é pouco para afirmar um papel fixo por head.
 - **Não há diferença visível entre acertos e erros.** Os mapas das três pinturas erradas têm a mesma cara dos mapas das três certas.
 
 ![Attention do CLS token no primeiro bloco, média das heads](figures/a1_attention_first_block.png)
 
 **Primeiro bloco**
 
-- Os mapas são manchas locais, em pontos de contraste forte:
-    - pintura 1: céu claro no alto à direita;
+- Os mapas são manchas locais. Parecem seguir pontos de contraste forte:
+    - pintura 1: borda direita no alto, ao lado do céu claro, com um ponto mais fraco no céu;
     - pintura 2: braço da figura, à esquerda;
     - pintura 3: vários pontos entre as formas coloridas;
     - pintura 4: parte de baixo do vestido branco, à esquerda;
     - pintura 5: parede no alto à esquerda;
     - pintura 6: traços escuros do desenho, sem nada no papel branco.
-- No primeiro bloco os tokens ainda são quase só o patch e a posição. A attention segue cor e contraste do próprio patch.
+- No primeiro bloco os tokens ainda são quase só o patch e a posição. A attention parece seguir cor e contraste do próprio patch.
 
 **Interpretação**
 
 - Os mapas não mostram uma história limpa, do tipo "o modelo olha para o rosto" ou "o modelo olha para a pincelada".
-- Isso é o esperado para este modelo. Ele acerta 32,5% no teste, e cada patch de 8x8 em uma imagem de 64x64 cobre uma parte grande da cena. Mapas com contorno de objeto aparecem em ViTs grandes e bem treinados, o que este não é.
+- Isso é o esperado para este modelo. Ele acerta 32,5% no teste, e cada patch de 8x8 em uma imagem de 64x64 cobre uma parte grande da cena. Mapas com contorno de objeto são relatados em ViTs treinados com muito mais dados, sobretudo com self-supervised learning. Este modelo é pequeno e acerta pouco.
 - A attention em cantos e fundo combina com a hipótese da seção sobre positional encoding: o modelo pode estar lendo cor e textura do fundo, que são pistas globais de período. Os mapas não provam isso.
 - Limite do método: o mapa mostra para onde o CLS token olha em um bloco. Ele não mostra o quanto cada região pesou na decisão final.
 
@@ -337,32 +310,25 @@ O modelo está em `src/dlv/vit.py`, classe `VisionTransformer`. O caminho da ima
 | Abstract Expressionism | 61 | 63,9% | 75,4% | 0,31 |
 | Early Renaissance | 54 | 50,0% | 87,0% | 0,44 |
 
-**Mais bem datados pelo modelo pré-treinado**
+**Mais bem e mais mal datados pelo modelo pré-treinado**
 
-- Northern Renaissance (90,6%), High Renaissance (90,5%, 19 de 21) e Early Renaissance (87,0%).
-- Lyrical Abstraction (82,6%, 19 de 23), Art Informel (81,0%, 17 de 21) e Abstract Expressionism (75,4%).
-
-**Mais mal datados pelo modelo pré-treinado**
-
-- Neoclassicism: 9,7% (3 de 31), com distância média de 2,10 períodos.
-- Symbolism: 14,3% (14 de 98).
-- Impressionism: 25,0% (50 de 200).
-- Romanticism e Realism: 34,3% e 34,4%. Juntos são 681 pinturas, 28% do teste.
+- Os mais bem datados já aparecem na tabela. Fora dela, por terem poucas pinturas, estão High Renaissance (90,5%, 19 de 21), Lyrical Abstraction (82,6%, 19 de 23) e Art Informel (81,0%, 17 de 21). O pior é Neoclassicism, com 9,7% (3 de 31). Romanticism e Realism, com 34,3% e 34,4%, somam 681 pinturas, 28% do teste.
 
 **Razão provável: quanto tempo o movimento durou em relação à largura dos períodos**
 
 - Os movimentos do Renascimento cabem inteiros no período "até 1599", que é o mais largo. Reconhecer o movimento já dá o período certo.
-- A abstração do pós-guerra cabe inteira em "1950 em diante", que não tem limite final. Vale o mesmo raciocínio.
-- Romanticism, Realism, Impressionism e Symbolism são do século XIX e do começo do XX, justamente onde os períodos têm só 25 anos. Um movimento que dura várias décadas fica partido em 2 ou 3 classes. O modelo reconhece o movimento e ainda precisa adivinhar a fatia.
+- A abstração do pós-guerra cabe quase inteira em "1950 em diante", que não tem limite final. Vale o mesmo raciocínio.
+- Romanticism, Realism, Impressionism e Symbolism são do século XIX e do começo do XX, onde os períodos têm 50 ou 25 anos. Um movimento que dura várias décadas fica partido em 2 ou 3 classes. O modelo reconhece o movimento e ainda precisa adivinhar a fatia.
 - A distância média apoia essa leitura para o Impressionism: a acurácia é de 25,0%, mas o erro médio é de 1,20 período. O modelo erra por perto.
 - O Neoclassicism é um caso diferente: o erro médio é de 2,10 períodos, ou seja, erra para longe. Uma razão plausível é que o estilo imita de propósito a pintura de séculos anteriores. É o exemplo mais direto de que estilo e data são coisas diferentes. São só 31 pinturas, então a medida é fraca.
+- A hipótese não explica tudo: Baroque (42,0%) e Rococo (49,3%) cabem no período 1600 a 1799 e mesmo assim ficam abaixo de 50%. Os valores são do modelo pré-treinado.
 - Esta explicação é uma hipótese. O notebook não guardou a distribuição de anos de cada movimento, então ela não foi conferida nos dados.
 
 **Onde o pré-treinamento ajudou mais e onde não ajudou**
 
-- Maiores ganhos: Expressionism (14,8% para 49,2%), Surrealism (19,0% para 54,5%) e Northern Renaissance (50,9% para 90,6%).
+- Maiores ganhos, em pontos percentuais, entre os 21 movimentos: Northern Renaissance (50,9% para 90,6%), High Renaissance (52,4% para 90,5%), Early Renaissance (50,0% para 87,0%) e Surrealism (19,0% para 54,5%).
 - Sem ganho: Impressionism (27,5% para 25,0%), Symbolism (16,3% para 14,3%), Baroque (48,0% para 42,0%, com 50 pinturas) e Neoclassicism (9,7% nos dois).
-- Uma leitura possível, não conferida nos dados: Impressionism e Symbolism têm muitas pinturas do fim do século XIX, o período em que o modelo pré-treinado quase não aposta.
+- Uma leitura possível, não conferida nos dados: Impressionism e Symbolism têm muitas pinturas do fim do século XIX, onde fica o buraco descrito em Resultados.
 
 ![Acurácia por movimento, ViT do zero](figures/a1_styles_scratch.png)
 
@@ -374,8 +340,8 @@ O modelo está em `src/dlv/vit.py`, classe `VisionTransformer`. O caminho da ima
 
 | | ViT do zero | ViT-B/16 pré-treinado |
 | --- | --- | --- |
-| Acurácia no teste | 32,50% (780 de 2.400) | 47,38% (1.137 de 2.400) |
-| Erro de até 1 período | 64,00% | 80,21% |
+| Acurácia no teste | 32,5% (780 de 2.400) | 47,4% (1.137 de 2.400) |
+| Acerto com tolerância de 1 período | 64,0% | 80,2% |
 | F1 macro | 0,320 | 0,458 |
 | Distância média | 1,49 período | 0,93 período |
 | Erros a 2 períodos ou mais | 864 | 475 |
@@ -388,14 +354,12 @@ O modelo está em `src/dlv/vit.py`, classe `VisionTransformer`. O caminho da ima
 
 **Escolha para este domínio: o ViT pré-treinado**
 
-- Acerta 357 pinturas a mais no teste: 14,9 pontos percentuais. O erro padrão de cada acurácia é de cerca de 1 ponto, então a diferença está muito acima do ruído.
-- Erra para longe quase a metade das vezes: 475 contra 864.
-- Custou menos tempo de treino: 236,0 s contra 277,4 s, mesmo com 31,5 vezes mais parâmetros (85.804.808 / 2.720.840). Bastaram 2 épocas.
-- O ViT do zero não tem dados suficientes. Com 11.200 pinturas ele decora o treino (46,56%) e para em 31% na validação.
+- Acerta 357 pinturas a mais no teste: 14,9 pontos percentuais. O erro padrão de cada acurácia é de cerca de 1 ponto, então a diferença está muito acima do ruído. Erra para longe 475 vezes contra 864.
+- Custou menos tempo de treino: 236,0 s contra 277,4 s, mesmo com 31,5 vezes mais parâmetros (85.804.808 / 2.720.840). O ViT do zero não tem dados suficientes: com 11.200 pinturas ele decora o treino (46,6%) e para em 31% na validação.
 
 **O que pesa contra**
 
-- O modelo é grande: avaliar o teste leva 7,7 s contra 0,6 s, e o pico de memória da GPU, de 3.971,6 MB, vem dele.
+- O modelo é grande: avaliar o teste leva 7,7 s contra 0,6 s, e o pico de memória da GPU, de 3.971,6 MB, provavelmente vem dele.
 - Ele tem um defeito que o ViT do zero não tem: quase ignora o período 1875 a 1899 (9,3% contra 28,0%).
 - Os dois modelos diferem em três coisas ao mesmo tempo: pré-treinamento, tamanho e resolução de entrada (224x224 contra 64x64). O experimento não separa quanto do ganho vem de cada uma.
 
@@ -419,14 +383,12 @@ O modelo está em `src/dlv/vit.py`, classe `VisionTransformer`. O caminho da ima
 
 - **Masked language modeling:** parte dos tokens da frase é escondida. O modelo precisa prever cada token escondido usando as palavras à esquerda e à direita.
 - **Next sentence prediction:** o modelo recebe duas frases e diz se a segunda vem depois da primeira no texto original.
-- O alvo sai do próprio texto, sem rótulo humano. Qualquer texto serve como dado de treino.
-- O que a estratégia maximiza: a probabilidade dos tokens corretos nas posições escondidas, mais o acerto na tarefa das duas frases. Para ir bem, cada token precisa de uma representação que use o contexto dos dois lados.
+- Para ir bem nas duas tarefas, cada token precisa de uma representação que use o contexto dos dois lados.
 
 **ViT**
 
-- O ViT original é pré-treinado com classificação supervisionada: imagem na entrada, classe na saída, entropia cruzada.
 - O artigo usa conjuntos rotulados grandes, como ImageNet-21k e JFT-300M. Ele mostra que, só com a ImageNet-1k, o ViT fica atrás de CNNs do mesmo porte, e que a vantagem aparece com mais dados.
-- O que a estratégia maximiza: a probabilidade da classe correta. A representação do CLS token aprende a separar as classes do conjunto de pré-treinamento.
+- A representação do CLS token aprende a separar as classes do conjunto de pré-treinamento.
 - Os pesos usados aqui (`IMAGENET1K_V1`) foram treinados com classificação supervisionada na ImageNet-1k.
 
 **Diferenças que importam**
@@ -441,7 +403,7 @@ O modelo está em `src/dlv/vit.py`, classe `VisionTransformer`. O caminho da ima
 - **BEiT:** esconde patches e prevê, para cada um, um token visual discreto produzido por um tokenizador de imagens.
 - **MAE:** esconde a maior parte dos patches e reconstrói os pixels que faltam. O encoder só processa os patches visíveis.
 - Os dois são self-supervised e dispensam rótulos, como BERT.
-- O que maximizam: a qualidade da reconstrução das partes escondidas. Para reconstruir um pedaço de pintura, textura e cor importam, o que parece mais próximo do que a datação precisa. Isso é uma hipótese e não foi testado aqui.
+- O que maximizam: o acerto na previsão das partes escondidas (tokens visuais no BEiT, pixels no MAE). Para reconstruir um pedaço de pintura, textura e cor importam, o que parece mais próximo do que a datação precisa. Isso é uma hipótese e não foi testado aqui.
 
 ## DeiT e Swin Transformer
 
@@ -452,8 +414,8 @@ O modelo está em `src/dlv/vit.py`, classe `VisionTransformer`. O caminho da ima
 - Como:
     - augmentation forte e regularização forte no treino;
     - um distillation token, que entra na sequência ao lado do CLS token. Ele aprende a imitar a resposta de um modelo professor, em geral uma CNN. O aluno herda parte das suposições da CNN.
-- A arquitetura é a do ViT. O que muda é a receita de treino.
-- **Ligação com este trabalho.** O ViT do zero daqui está no regime que o DeiT ataca, em escala bem menor: 11.200 imagens, augmentation leve, nenhum professor. O resultado foi overfitting (46,56% no treino, 31,42% na validação). A receita do DeiT indica o que tentar: augmentation mais forte e distillation a partir de um modelo melhor, como o ViT-B/16 com fine-tuning.
+- O encoder é o do ViT, com um token a mais. O que muda é a receita de treino.
+- **Ligação com este trabalho.** O ViT do zero daqui está no regime que o DeiT ataca, em escala bem menor: 11.200 imagens, augmentation leve, nenhum professor. O resultado foi overfitting (46,6% no treino, 31,4% na validação). A receita do DeiT indica o que tentar: augmentation mais forte e distillation a partir de um modelo melhor, como o ViT-B/16 com fine-tuning.
 
 **Swin Transformer: o problema da escala e do custo**
 
@@ -473,7 +435,7 @@ O modelo está em `src/dlv/vit.py`, classe `VisionTransformer`. O caminho da ima
 
 **O que cada arquitetura supõe**
 
-- **CNN:** supõe que pixels vizinhos se relacionam e que o mesmo filtro serve em qualquer lugar da imagem. Essas suposições são verdadeiras para imagens e economizam dados.
+- **CNN:** supõe que pixels vizinhos se relacionam e que o mesmo filtro serve em qualquer lugar da imagem. Essas suposições valem para a maioria das imagens e economizam dados.
 - **ViT:** supõe quase nada. Qualquer patch pode se relacionar com qualquer outro desde o primeiro bloco. Ganha flexibilidade e precisa de mais dados para aprender o que a CNN já traz pronto.
 
 **ViT é a melhor escolha quando**
@@ -490,15 +452,11 @@ O modelo está em `src/dlv/vit.py`, classe `VisionTransformer`. O caminho da ima
 
 **Neste domínio**
 
-- Os dados deste trabalho mostram os dois lados do ViT:
-    - sem pré-treinamento e com 11.200 pinturas, ele ficou em 32,50% e com overfitting;
-    - com pré-treinamento, chegou a 47,38% em 2 épocas.
-- O ganho veio do pré-treinamento. A arquitetura sozinha não bastou.
+- Sem pré-treinamento e com 11.200 pinturas, o ViT ficou em 32,5% e com overfitting. Com pré-treinamento, chegou a 47,4% em 2 épocas. O ganho veio do pré-treinamento. Na Atividade 3, uma ResNet-50 pré-treinada, com o backbone congelado e 14.343 parâmetros treinados, chegou a 100% em um teste de 265 fotos de 7 classes de objetos, um domínio próximo da ImageNet. A datação de pinturas é distante, e boa parte da dificuldade vem do domínio e da tarefa.
 - As pistas de data são de dois tipos:
-    - locais: pincelada, craquelado, textura da tinta. São o terreno da CNN;
-    - globais: composição, paleta, uso do espaço. São o terreno do ViT.
+    - locais: pincelada, craquelado, textura da tinta. Favorecem a CNN;
+    - globais: composição, paleta, uso do espaço. Favorecem o ViT.
 - O experimento sem positional encoding sugere que, a 64x64, o ViT do zero não tirou proveito do arranjo espacial. A vantagem teórica do ViT, a relação entre regiões distantes, não apareceu nesta escala.
-- **Referência da Atividade 3.** Uma ResNet-50 pré-treinada, com o backbone congelado e 14.343 parâmetros treinados, chegou a 100% em um teste de 265 fotos de 7 classes de objetos. Aquele domínio é próximo da ImageNet. A datação de pinturas é distante: com fine-tuning de 85.804.808 parâmetros, o ViT ficou em 47,38%. Boa parte da dificuldade vem do domínio e da tarefa.
 - **O que não foi medido.** Nenhuma CNN foi treinada nas pinturas. Não há dado deste trabalho que diga se uma ResNet-50 com fine-tuning ficaria acima ou abaixo do ViT-B/16.
 - **Recomendação para este domínio:**
     - treinar do zero com cerca de 11 mil imagens: uma CNN pequena é a aposta mais segura, pelas suposições que economizam dados. É uma expectativa, sem medida aqui;
@@ -510,15 +468,14 @@ O modelo está em `src/dlv/vit.py`, classe `VisionTransformer`. O caminho da ima
 
 - **Uma seed por modelo.** A variação entre execuções não foi medida. A diferença de 14,9 pontos entre o modelo pré-treinado e o do zero é grande o bastante para não depender disso. A comparação com e sem posição (1 pintura de diferença) depende.
 - **Uma amostra.** São 16.000 pinturas sorteadas uma vez, de 76.881 com ano. Outra amostra daria outros pintores no teste.
-- **Teste de 2.400 pinturas.** O erro padrão da acurácia é de cerca de 1 ponto percentual. Por período são 300 pinturas, e por movimento há grupos com pouco mais de 20.
-- **Pintores que pesam no teste.** Max Ernst é 18,7% do teste de 1925 a 1949, e Sam Francis é 15,3% do de 1950 em diante. A acurácia desses dois períodos depende em parte de dois pintores.
-- **Entrada de 64x64 no modelo do zero.** A pincelada some nessa resolução. A comparação com o modelo pré-treinado mistura três fatores: pré-treinamento, tamanho do modelo e resolução.
-- **Fine-tuning curto e simples.** Duas épocas, sem augmentation, taxa de aprendizado constante. A perda de validação subiu na segunda época. Um treino mais cuidadoso provavelmente passaria de 47,38%, mas isso não foi medido. Os pesos avaliados são os da última época.
-- **Período sem aposta.** O modelo pré-treinado acerta 9,3% em 1875 a 1899. A acurácia global e a tolerância de 1 período escondem esse defeito.
-- **Rótulos.** O ano vem de um upload de terceiros do WikiArt, sem licença declarada e sem conferência. Datas aproximadas foram lidas como exatas.
-- **Estilo e data.** Um pintor pode trabalhar em um estilo antigo. Nesses casos nenhum modelo que olha só a imagem acerta.
-- **Períodos de larguras diferentes.** Errar por 1 período no século XIX é errar 25 anos. Entre "até 1599" e "1600 a 1799" pode ser errar séculos. A distância em períodos não é uma distância em anos.
-- **Mapas de attention.** Seis pinturas, um modelo fraco, uma grade de 8x8. Servem como ilustração. São evidência fraca do que o modelo usa.
+- **Teste de 2.400 pinturas.** O erro padrão da acurácia é de cerca de 1 ponto percentual, e alguns grupos de movimento têm pouco mais de 20 pinturas.
+- **Pintores que pesam no teste.** Max Ernst (18,7%) e Sam Francis (15,3%) pesam em dois períodos do teste.
+- **Entrada de 64x64.** A pincelada some nessa resolução, e a comparação mistura pré-treinamento, tamanho do modelo e resolução.
+- **Fine-tuning curto e simples.** Duas épocas, sem augmentation, taxa de aprendizado constante. Um treino mais cuidadoso provavelmente passaria de 47,4%, mas isso não foi medido.
+- **Rótulos.** Ano de upload de terceiros, sem licença declarada e sem conferência, com datas aproximadas lidas como exatas.
+- **Estilo e data.** Um pintor pode usar um estilo antigo, e nesses casos nenhum modelo que olha só a imagem acerta.
+- **Períodos de larguras diferentes.** Errar por 1 período depois de 1850 é errar cerca de 25 anos. Entre "até 1599" e "1600 a 1799" pode ser errar séculos. A distância em períodos não é uma distância em anos.
+- **Mapas de attention.** Seis pinturas, um modelo fraco, uma grade de 8x8: servem como ilustração, com evidência fraca do que o modelo usa.
 
 **O que mudaria**
 
