@@ -1,5 +1,7 @@
 """Class-conditional GAN for 64x64 grayscale images, its losses, training loop and two diagnostic measures."""
 
+from contextlib import contextmanager
+
 import torch
 from torch import Tensor, nn
 from torch.nn.functional import binary_cross_entropy_with_logits, relu
@@ -14,7 +16,10 @@ SNAPSHOT_COLUMNS = 8
 
 
 def check_labels(labels: Tensor, num_classes: int) -> None:
-    """Raises ValueError when any label falls outside 0 to num_classes - 1."""
+    """Raises ValueError when any label falls outside 0 to num_classes - 1.
+
+    Reads the label range back to Python, which synchronises with the GPU.
+    """
     if labels.numel() == 0:
         return
     lowest, highest = int(labels.min()), int(labels.max())
@@ -50,6 +55,7 @@ class ConditionalGenerator(nn.Module):
         super().__init__()
         self.latent_dim = latent_dim
         self.num_classes = num_classes
+        self.validate_labels = True
         self.embedding = nn.Embedding(num_classes, latent_dim)
         width = base_channels
         self.network = nn.Sequential(
@@ -72,7 +78,8 @@ class ConditionalGenerator(nn.Module):
 
     def forward(self, noise: Tensor, labels: Tensor) -> Tensor:
         """Maps (n, latent_dim) noise and (n,) integer labels to (n, 1, 64, 64) images."""
-        check_labels(labels, self.num_classes)
+        if self.validate_labels:
+            check_labels(labels, self.num_classes)
         conditioned = torch.cat([noise, self.embedding(labels)], dim=1)
         return self.network(conditioned[:, :, None, None])
 
@@ -91,6 +98,7 @@ class ConditionalDiscriminator(nn.Module):
         """Builds the label map and the strided convolutions from 64x64 down to one logit."""
         super().__init__()
         self.num_classes = num_classes
+        self.validate_labels = True
         self.embedding = nn.Embedding(num_classes, IMAGE_SIZE * IMAGE_SIZE)
         width = base_channels
         sizes = [2, width, width * 2, width * 4, width * 8]
@@ -117,7 +125,8 @@ class ConditionalDiscriminator(nn.Module):
 
     def forward(self, images: Tensor, labels: Tensor) -> Tensor:
         """Maps (n, 1, 64, 64) images and (n,) labels to (n,) logits."""
-        check_labels(labels, self.num_classes)
+        if self.validate_labels:
+            check_labels(labels, self.num_classes)
         label_map = self.embedding(labels).view(-1, 1, IMAGE_SIZE, IMAGE_SIZE)
         return self.network(torch.cat([images, label_map], dim=1)).flatten()
 
@@ -195,6 +204,18 @@ def sample_images(generator: ConditionalGenerator, noise: Tensor, labels: Tensor
     return images
 
 
+@contextmanager
+def unchecked_labels(*models: nn.Module):
+    """Turns the per-forward label range check off for the models, restoring it on exit."""
+    for model in models:
+        model.validate_labels = False
+    try:
+        yield
+    finally:
+        for model in models:
+            model.validate_labels = True
+
+
 def default_snapshot_inputs(
     latent_dim: int, num_classes: int, noise_generator: torch.Generator
 ) -> tuple[Tensor, Tensor]:
@@ -226,7 +247,9 @@ def train_gan(
     The discriminator step sees real images and generated images that carry no
     gradient to the generator. The generator step draws fresh noise and scores
     its images through the updated discriminator. Each optimiser owns only its
-    own network. Both networks train in training mode; the generator switches to
+    own network, and the discriminator computes no parameter gradients during
+    the generator step. Label range checks are skipped inside the loop (the
+    labels are validated once up front) and restored afterwards. Both networks train in training mode; the generator switches to
     evaluation mode for per-epoch diversity and snapshots and returns to
     training mode. `images` are uint8 (n, 1, 64, 64) and are scaled to -1..1
     here. Without snapshot noise and labels, a fixed batch with the same number
@@ -237,15 +260,20 @@ def train_gan(
     `diversity` (class to a per-epoch list, from fixed noise) and `snapshots`
     (epoch from 1 to uint8 grid tensors on the CPU). Drop `snapshots` before
     saving the history as JSON.
+
+    `seed` governs the shuffling order, the training noise and the fixed
+    diversity and snapshot noise, all drawn from local generators; the global
+    random state is left untouched. Initialising the networks is the caller's
+    job and is not covered by `seed`.
     """
     if loss not in LOSS_KINDS:
         raise ValueError(f"loss kind must be one of {LOSS_KINDS}, got {loss!r}")
     if (snapshot_noise is None) != (snapshot_labels is None):
         raise ValueError("snapshot_noise and snapshot_labels must be given together")
     check_labels(labels, generator.num_classes)
-    torch.manual_seed(seed)
     shuffle_generator = torch.Generator().manual_seed(seed)
     fixed_generator = torch.Generator().manual_seed(seed + 1)
+    noise_generator = torch.Generator(device=device).manual_seed(seed)
     num_classes = generator.num_classes
     latent_dim = generator.latent_dim
 
@@ -278,58 +306,61 @@ def train_gan(
         "diversity": {index: [] for index in range(num_classes)},
         "snapshots": {},
     }
-    generator.train()
-    discriminator.train()
+    with unchecked_labels(generator, discriminator):
+        generator.train()
+        discriminator.train()
 
-    for epoch in range(1, epochs + 1):
-        order = torch.randperm(count, generator=shuffle_generator).to(device)
-        totals = torch.zeros(4, device=device)
-        for start in range(0, count, batch_size):
-            indices = order[start : start + batch_size]
-            batch = indices.shape[0]
-            real = real_images[indices].float() / 127.5 - 1.0
-            batch_labels = real_labels[indices]
+        for epoch in range(1, epochs + 1):
+            order = torch.randperm(count, generator=shuffle_generator).to(device)
+            totals = torch.zeros(4, device=device)
+            for start in range(0, count, batch_size):
+                indices = order[start : start + batch_size]
+                batch = indices.shape[0]
+                real = real_images[indices].float() / 127.5 - 1.0
+                batch_labels = real_labels[indices]
 
-            noise = torch.randn(batch, latent_dim, device=device)
-            with torch.no_grad():
-                fake = generator(noise, batch_labels)
-            real_logits = discriminator(real, batch_labels)
-            fake_logits = discriminator(fake, batch_labels)
-            discriminator_step_loss = discriminator_loss(real_logits, fake_logits, loss)
-            discriminator_optimizer.zero_grad(set_to_none=True)
-            discriminator_step_loss.backward()
-            discriminator_optimizer.step()
+                noise = torch.randn(batch, latent_dim, device=device, generator=noise_generator)
+                with torch.no_grad():
+                    fake = generator(noise, batch_labels)
+                real_logits = discriminator(real, batch_labels)
+                fake_logits = discriminator(fake, batch_labels)
+                discriminator_step_loss = discriminator_loss(real_logits, fake_logits, loss)
+                discriminator_optimizer.zero_grad(set_to_none=True)
+                discriminator_step_loss.backward()
+                discriminator_optimizer.step()
 
-            noise = torch.randn(batch, latent_dim, device=device)
-            generated_logits = discriminator(generator(noise, batch_labels), batch_labels)
-            generator_step_loss = generator_loss(generated_logits, loss)
-            generator_optimizer.zero_grad(set_to_none=True)
-            generator_step_loss.backward()
-            generator_optimizer.step()
+                noise = torch.randn(batch, latent_dim, device=device, generator=noise_generator)
+                discriminator.requires_grad_(False)
+                generated_logits = discriminator(generator(noise, batch_labels), batch_labels)
+                generator_step_loss = generator_loss(generated_logits, loss)
+                generator_optimizer.zero_grad(set_to_none=True)
+                generator_step_loss.backward()
+                generator_optimizer.step()
+                discriminator.requires_grad_(True)
 
-            with torch.no_grad():
-                totals += batch * torch.stack(
-                    [
-                        discriminator_step_loss.detach(),
-                        generator_step_loss.detach(),
-                        torch.sigmoid(real_logits).mean(),
-                        torch.sigmoid(fake_logits).mean(),
-                    ]
-                )
+                with torch.no_grad():
+                    totals += batch * torch.stack(
+                        [
+                            discriminator_step_loss.detach(),
+                            generator_step_loss.detach(),
+                            torch.sigmoid(real_logits).mean(),
+                            torch.sigmoid(fake_logits).mean(),
+                        ]
+                    )
 
-        averages = (totals / count).tolist()
-        history["discriminator_loss"].append(averages[0])
-        history["generator_loss"].append(averages[1])
-        history["real_score"].append(averages[2])
-        history["fake_score"].append(averages[3])
+            averages = (totals / count).tolist()
+            history["discriminator_loss"].append(averages[0])
+            history["generator_loss"].append(averages[1])
+            history["real_score"].append(averages[2])
+            history["fake_score"].append(averages[3])
 
-        diverse = sample_images(generator, diversity_noise, diversity_labels)
-        for index in range(num_classes):
-            members = diverse[diversity_labels == index]
-            history["diversity"][index].append(pairwise_diversity(members))
-        if epoch in snapshot_set:
-            snapshot = sample_images(generator, snapshot_noise, snapshot_labels)
-            history["snapshots"][epoch] = image_grid(snapshot).cpu()
+            diverse = sample_images(generator, diversity_noise, diversity_labels)
+            for index in range(num_classes):
+                members = diverse[diversity_labels == index]
+                history["diversity"][index].append(pairwise_diversity(members))
+            if epoch in snapshot_set:
+                snapshot = sample_images(generator, snapshot_noise, snapshot_labels)
+                history["snapshots"][epoch] = image_grid(snapshot).cpu()
 
     return history
 

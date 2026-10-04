@@ -1,6 +1,7 @@
 """Tests for the conditional GAN, its losses, diversity measures, training loop and sampling."""
 
-import math
+from json import dumps, loads
+from math import exp, isfinite, log
 
 import pytest
 import torch
@@ -77,6 +78,18 @@ def test_discriminator_output_shape():
     assert logits.shape == (5,)
 
 
+@pytest.mark.parametrize("spectral", [False, True])
+def test_discriminator_logits_depend_on_label(spectral):
+    """The same images get different logits under different labels."""
+    torch.manual_seed(0)
+    discriminator = small_discriminator(spectral_norm=spectral).eval()
+    images = torch.randn(4, 1, 64, 64)
+    with torch.no_grad():
+        first = discriminator(images, torch.zeros(4, dtype=torch.long))
+        second = discriminator(images, torch.full((4,), 2))
+    assert not torch.allclose(first, second)
+
+
 def test_discriminator_rejects_out_of_range_label():
     """The discriminator also refuses unknown labels."""
     with pytest.raises(ValueError, match="labels must be in"):
@@ -100,14 +113,18 @@ def test_plain_discriminator_has_batch_norm_and_no_spectral_norm():
     assert any(isinstance(m, nn.BatchNorm2d) for m in discriminator.modules())
 
 
+def sigmoid(value):
+    """Logistic function on a Python float."""
+    return 1 / (1 + exp(-value))
+
+
 def test_discriminator_loss_bce_matches_hand_computation():
     """BCE discriminator loss equals -log sigmoid(real) - log(1 - sigmoid(fake)) averaged."""
     real = torch.tensor([0.0, 2.0])
     fake = torch.tensor([0.0, -1.0])
-    sigmoid = lambda value: 1 / (1 + math.exp(-value))
     expected = (
-        -(math.log(sigmoid(0.0)) + math.log(sigmoid(2.0))) / 2
-        - (math.log(1 - sigmoid(0.0)) + math.log(1 - sigmoid(-1.0))) / 2
+        -(log(sigmoid(0.0)) + log(sigmoid(2.0))) / 2
+        - (log(1 - sigmoid(0.0)) + log(1 - sigmoid(-1.0))) / 2
     )
     assert discriminator_loss(real, fake, "bce").item() == pytest.approx(expected, rel=1e-5)
 
@@ -122,7 +139,7 @@ def test_discriminator_loss_hinge_matches_hand_computation():
 def test_generator_loss_bce_matches_hand_computation():
     """Non-saturating generator loss is the mean of -log sigmoid(fake)."""
     fake = torch.tensor([0.0, 1.0])
-    expected = -(math.log(0.5) + math.log(1 / (1 + math.exp(-1.0)))) / 2
+    expected = -(log(0.5) + log(1 / (1 + exp(-1.0)))) / 2
     assert generator_loss(fake, "bce").item() == pytest.approx(expected, rel=1e-5)
 
 
@@ -202,7 +219,7 @@ def test_train_gan_updates_both_networks_and_records_history(loss):
     assert not torch.equal(before[1], parameters_of(discriminator))
     for key in ("discriminator_loss", "generator_loss", "real_score", "fake_score"):
         assert len(history[key]) == 2
-        assert all(math.isfinite(value) for value in history[key])
+        assert all(isfinite(value) for value in history[key])
     assert set(history["diversity"]) == {0, 1, 2}
     assert all(len(values) == 2 for values in history["diversity"].values())
     assert "snapshots" in history
@@ -216,6 +233,28 @@ def test_train_gan_is_reproducible_for_the_same_seed():
     assert torch.equal(parameters_of(first_generator), parameters_of(second_generator))
     assert first_history["generator_loss"] == second_history["generator_loss"]
     assert first_history["diversity"] == second_history["diversity"]
+
+
+def test_train_gan_leaves_global_random_state_untouched():
+    """Training draws only from local generators, so the global state is unchanged."""
+    torch.manual_seed(100)
+    generator, discriminator = small_generator(), small_discriminator()
+    before = torch.get_rng_state()
+    train_gan(
+        generator, discriminator, random_images(16), torch.arange(16) % 3,
+        epochs=1, batch_size=8, device=DEVICE, seed=11, snapshot_epochs=(1,),
+    )
+    assert torch.equal(before, torch.get_rng_state())
+
+
+def test_train_gan_restores_discriminator_gradients_and_input_checks():
+    """After training the discriminator is trainable again and direct label checks are back."""
+    generator, discriminator, _ = run_training()
+    assert all(parameter.requires_grad for parameter in discriminator.parameters())
+    with pytest.raises(ValueError, match="labels must be in"):
+        generator(torch.randn(1, 8), torch.tensor([9]))
+    with pytest.raises(ValueError, match="labels must be in"):
+        discriminator(torch.randn(1, 1, 64, 64), torch.tensor([9]))
 
 
 def test_train_gan_differs_for_another_seed():
@@ -250,7 +289,7 @@ def test_each_optimizer_steps_only_its_own_network():
 def test_train_gan_handles_small_last_batch():
     """A last batch of one image does not break training or the averages."""
     _, _, history = run_training(images=random_images(9), batch_size=8)
-    assert all(math.isfinite(value) for value in history["discriminator_loss"])
+    assert all(isfinite(value) for value in history["discriminator_loss"])
 
 
 def test_train_gan_snapshots_and_mode_restoration():
@@ -287,11 +326,9 @@ def test_train_gan_rejects_unknown_loss_and_labels():
 
 def test_train_gan_history_is_json_serialisable_without_snapshots():
     """Dropping the snapshots key leaves a history json can encode."""
-    import json
-
     _, _, history = run_training(snapshot_epochs=(1,))
     history.pop("snapshots")
-    assert json.loads(json.dumps(history))["real_score"] == history["real_score"]
+    assert loads(dumps(history))["real_score"] == history["real_score"]
 
 
 def test_generate_shape_dtype_and_determinism():
