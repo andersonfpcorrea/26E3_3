@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import torch
-from PIL import Image
 from torch import Tensor
 from transformers import CLIPModel, CLIPProcessor
 
