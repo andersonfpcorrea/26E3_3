@@ -309,6 +309,7 @@ def train_gan(
     seed: int = 42,
     gradient_penalty_weight: float = 0.0,
     augment: bool = False,
+    balanced_classes: bool = False,
     snapshot_epochs=(),
     snapshot_noise: Tensor | None = None,
     snapshot_labels: Tensor | None = None,
@@ -338,7 +339,11 @@ def train_gan(
     random state is left untouched. A positive ``gradient_penalty_weight`` adds the
     WGAN-GP penalty to the discriminator loss. With ``augment``, every image the
     discriminator scores, real or generated, first goes through ``differentiable_augment``. Initialising the networks is the caller's
-    job and is not covered by `seed`.
+    job and is not covered by `seed`. With ``balanced_classes`` every epoch draws its
+    indices with replacement, with probability inversely proportional to the
+    frequency of the image's class, so each class has the same expected share
+    of the batches. The number of batches per epoch does not change, and the
+    draws come from the local shuffling generator.
     """
     if loss not in LOSS_KINDS:
         raise ValueError(f"loss kind must be one of {LOSS_KINDS}, got {loss!r}")
@@ -358,6 +363,10 @@ def train_gan(
     real_images = images.to(device)
     real_labels = labels.to(device).long()
     count = real_images.shape[0]
+    sampling_weights = None
+    if balanced_classes:
+        class_counts = torch.bincount(labels.long(), minlength=num_classes).float()
+        sampling_weights = 1.0 / class_counts[labels.long()]
 
     diversity_labels = torch.arange(num_classes).repeat_interleave(DIVERSITY_SAMPLES)
     diversity_noise = torch.randn(diversity_labels.shape[0], latent_dim, generator=fixed_generator)
@@ -387,7 +396,12 @@ def train_gan(
         discriminator.train()
 
         for epoch in range(1, epochs + 1):
-            order = torch.randperm(count, generator=shuffle_generator).to(device)
+            if sampling_weights is None:
+                order = torch.randperm(count, generator=shuffle_generator).to(device)
+            else:
+                order = torch.multinomial(
+                    sampling_weights, count, replacement=True, generator=shuffle_generator
+                ).to(device)
             totals = torch.zeros(4, device=device)
             for start in range(0, count, batch_size):
                 indices = order[start : start + batch_size]
@@ -467,7 +481,7 @@ def train_gan_version(
     """Builds and trains one GAN version for one seed, and returns its generator and history.
 
     ``settings`` names the version: ``spectral_norm``, ``batch_norm``, ``loss``,
-    ``gradient_penalty_weight``, ``augment``, ``betas``, ``generator_lr`` and
+    ``gradient_penalty_weight``, ``augment``, optional ``balanced_classes``, ``betas``, ``generator_lr`` and
     ``discriminator_lr``. The global torch seed is set to ``seed`` right before
     each network is built, so the initial weights follow the seed, and the same
     seed goes to ``train_gan`` for shuffling and noise. This moves the global
@@ -496,6 +510,7 @@ def train_gan_version(
         gradient_penalty_weight=settings["gradient_penalty_weight"],
         betas=settings["betas"],
         augment=settings["augment"],
+        balanced_classes=settings.get("balanced_classes", False),
         generator_lr=settings["generator_lr"],
         discriminator_lr=settings["discriminator_lr"],
         seed=seed,

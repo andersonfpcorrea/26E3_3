@@ -662,3 +662,86 @@ def test_train_gan_version_uses_the_settings_of_the_version():
     )
     assert history["discriminator_loss"][0] != 0.0
     assert isfinite(history["generator_loss"][0])
+
+
+class RecordingDiscriminator(ConditionalDiscriminator):
+    """Discriminator that remembers every label batch it is called with."""
+
+    def __init__(self, *args, **kwargs):
+        """Builds the discriminator with an empty record."""
+        super().__init__(*args, **kwargs)
+        self.seen = []
+
+    def forward(self, images, labels):
+        """Records the labels and scores the images as usual."""
+        self.seen.append(labels.detach().cpu().clone())
+        return super().forward(images, labels)
+
+
+def imbalanced_set():
+    """Builds 72 images with 60 of class 0, 8 of class 1 and 4 of class 2."""
+    return random_images(72), torch.tensor([0] * 60 + [1] * 8 + [2] * 4)
+
+
+def label_shares(**overrides):
+    """Trains a few epochs on the imbalanced set and returns the share of each class among the labels seen."""
+    images, labels = imbalanced_set()
+    discriminator = RecordingDiscriminator(num_classes=3, base_channels=8)
+    settings = dict(epochs=6, batch_size=8, device=DEVICE, seed=3)
+    settings.update(overrides)
+    train_gan(small_generator(), discriminator, images, labels, **settings)
+    seen = torch.cat(discriminator.seen)
+    return torch.bincount(seen, minlength=3).float() / seen.numel()
+
+
+def test_balanced_classes_makes_the_labels_seen_close_to_uniform():
+    """With the flag on every class has about a third of the labels, with it off they follow the data."""
+    balanced = label_shares(balanced_classes=True)
+    plain = label_shares()
+    assert balanced == pytest.approx([1 / 3] * 3, abs=0.08)
+    assert plain == pytest.approx([60 / 72, 8 / 72, 4 / 72], abs=0.01)
+
+
+def test_balanced_classes_keeps_the_number_of_batches_per_epoch():
+    """Sampling with replacement still gives ceil(n / batch_size) steps per epoch."""
+    images, labels = imbalanced_set()
+    counts = []
+    for flag in (False, True):
+        discriminator = RecordingDiscriminator(num_classes=3, base_channels=8)
+        train_gan(
+            small_generator(), discriminator, images, labels,
+            epochs=2, batch_size=8, device=DEVICE, seed=3, balanced_classes=flag,
+        )
+        counts.append(len(discriminator.seen))
+    assert counts[0] == counts[1] == 2 * 9 * 3
+
+
+def test_balanced_classes_is_reproducible_and_leaves_global_random_state_untouched():
+    """The same seed gives the same history and the global generator does not move."""
+    images, labels = imbalanced_set()
+    histories = []
+    for _ in range(2):
+        torch.manual_seed(100)
+        generator, discriminator = small_generator(), small_discriminator()
+        before = torch.get_rng_state()
+        histories.append(
+            train_gan(generator, discriminator, images, labels, epochs=2, batch_size=8,
+                      device=DEVICE, seed=5, balanced_classes=True)
+        )
+        assert torch.equal(before, torch.get_rng_state())
+    assert histories[0]["generator_loss"] == histories[1]["generator_loss"]
+    assert histories[0]["diversity"] == histories[1]["diversity"]
+
+
+def test_train_gan_version_passes_balanced_classes_through_the_settings():
+    """A version whose settings ask for balanced classes trains on balanced batches."""
+    images, labels = imbalanced_set()
+    plain, _ = train_gan_version(
+        VERSION_SETTINGS, images, labels, 7,
+        epochs=2, batch_size=8, base_channels=8, device=DEVICE, latent_dim=8,
+    )
+    balanced, _ = train_gan_version(
+        {**VERSION_SETTINGS, "balanced_classes": True}, images, labels, 7,
+        epochs=2, batch_size=8, base_channels=8, device=DEVICE, latent_dim=8,
+    )
+    assert not torch.equal(parameters_of(plain), parameters_of(balanced))
