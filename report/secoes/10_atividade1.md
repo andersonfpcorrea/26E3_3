@@ -76,6 +76,7 @@ Tudo está em `src/dlv/attention.py`, escrito com camadas lineares e softmax. Os
 
 **Como é testado (`tests/test_attention.py`, 13 testes em CPU)**
 
+- Os arquivos de teste estão no arquivo de entrega, na pasta `tests/`.
 - A saída da função é igual à fórmula calculada à mão.
 - Os pesos são não negativos e cada linha soma 1.
 - Uma posição mascarada recebe peso zero. Uma linha toda mascarada não gera NaN, nem na saída nem no gradiente.
@@ -100,6 +101,7 @@ O modelo está em `src/dlv/vit.py`, classe `VisionTransformer`. O caminho da ima
 
 **Como é testado (`tests/test_vit.py`, 14 testes em CPU)**
 
+- Os arquivos de teste estão no arquivo de entrega, na pasta `tests/`.
 - Uma imagem de 64x64 vira 64 tokens de 192 dimensões. Cada token depende só do seu patch.
 - O modelo devolve 8 logits por imagem.
 - O CLS token e o positional encoding são parâmetros treináveis, e o positional encoding tem 65 posições.
@@ -138,7 +140,7 @@ O modelo está em `src/dlv/vit.py`, classe `VisionTransformer`. O caminho da ima
 
 **ViT treinado do zero (com e sem posição)**
 
-- **Entrada de 64x64 e patch de 8x8.** Dá 65 tokens, o que deixa o treino rápido na T4: cerca de 7 segundos por época. As imagens reduzidas cabem na memória da GPU.
+- **Entrada de 64x64 e patch de 8x8.** Dá 65 tokens, o que deixa o treino rápido na T4: cerca de 8 segundos por época. As imagens reduzidas cabem na memória da GPU.
 - **192 dimensões, 6 blocos, 3 heads.** Um modelo pequeno, de 2,7 milhões de parâmetros, para 11.200 imagens de treino. São 243 parâmetros por imagem. Um modelo maior tenderia a ter ainda mais overfitting.
 - **AdamW, weight decay 0,05.** É o otimizador usual para Transformers. O weight decay é a regularização principal.
 - **Taxa de aprendizado 0,001, com 5 épocas de subida linear e depois queda em cosseno.** Transformers treinados do zero são instáveis no começo. A subida gradual evita passos grandes enquanto os pesos ainda são aleatórios.
