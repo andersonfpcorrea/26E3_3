@@ -4,8 +4,8 @@
 
 - Um grupo anterior montou um sistema de triagem de pneumonia e COVID-19 em radiografias de tórax e encerrou o projeto com resultados "promissores". O time clínico relatou que o modelo "ignora casos positivos".
 - Dados: 1.200 radiografias em três classes: Normal (840), Pneumonia (240) e COVID-19 (120). Divisão 80/20 sem estratificação.
-- Modelo: ResNet-18 sem pré-treinamento, SGD, learning rate fixa de 0,01, 15 épocas, sem augmentation.
-- Avaliação: só accuracy global. Resultado reportado: 93% no treino e 61% na validação.
+- Modelo: ResNet-18 sem pré-treinamento, SGD, taxa de aprendizado fixa de 0,01, 15 épocas, sem augmentation.
+- Avaliação: só acurácia global. Resultado reportado: 93% no treino e 61% na validação.
 
 **O que este trabalho fez com o caso**
 
@@ -23,14 +23,14 @@ A reprodução do projeto serve de evidência. Os números dela, todos da mesma 
 
 | Medida | Valor |
 | --- | --- |
-| Accuracy de treino na última época | 100% |
-| Accuracy de validação na última época | 89,6% (215 de 240) |
-| Accuracy de quem sempre responde Normal, na mesma validação | 72,5% (174 de 240) |
+| Acurácia de treino na última época | 100% |
+| Acurácia de validação na última época | 89,6% (215 de 240) |
+| Acurácia de quem sempre responde Normal, na mesma validação | 72,5% (174 de 240) |
 | Recall de COVID-19 na validação do projeto | 0,41 (9 de 22) |
 | Recall de COVID-19 no teste real | 0,37 (112 de 300) |
 | Recall de Normal e de Pneumonia no teste real | 0,96 e 0,96 |
 
-![Projeto reproduzido: perda e accuracy por época](figures/a4_original_history.png)
+![Projeto reproduzido: perda e acurácia por época](figures/a4_original_history.png)
 
 ### 1. Desbalanceamento sem tratamento
 
@@ -38,7 +38,7 @@ A reprodução do projeto serve de evidência. Os números dela, todos da mesma 
 
 - Normal tem 70% das imagens e COVID-19 tem 10%. São 7 imagens de Normal para cada imagem de COVID-19.
 - A perda dá o mesmo peso a cada imagem. Errar todas as imagens de COVID-19 custa pouco na média, então o modelo aprende a preferir Normal.
-- Na reprodução, 13 das 22 imagens de COVID-19 da validação foram classificadas como Normal. No teste real, 168 das 300.
+- No teste real da reprodução, 168 das 300 imagens de COVID-19 foram classificadas como Normal.
 
 **Impacto clínico**
 
@@ -54,15 +54,15 @@ A reprodução do projeto serve de evidência. Os números dela, todos da mesma 
 
 **Impacto clínico**
 
-- O número apresentado ao hospital tem uma incerteza grande e ninguém a informou.
+- O hospital pode receber um modelo aprovado por duas ou três imagens de sorte. Na fila real, ele deixa passar mais casos de COVID-19 do que o número apresentado indicava, e a equipe só percebe depois, pelos laudos.
 
-### 3. Accuracy global como única métrica
+### 3. Acurácia global como única métrica
 
 **O que está errado**
 
-- A accuracy mistura as três classes e é dominada pela maior.
-- Na reprodução, a accuracy de validação foi 89,6% e parece aceitável. Responder sempre Normal já daria 72,5%.
-- Na mesma validação, a recall de COVID-19 foi 0,41. O modelo perdeu mais da metade dos casos da classe que motivou o projeto, e o número reportado não mostra isso.
+- A acurácia mistura as três classes e é dominada pela maior.
+- Na reprodução, a acurácia de validação foi 89,6% e parece aceitável. Responder sempre Normal já daria 72,5%.
+- Na mesma validação, a recall de COVID-19 foi 0,41. O modelo perdeu mais da metade dos casos da classe que motivou o projeto.
 
 **Impacto clínico**
 
@@ -73,24 +73,24 @@ A reprodução do projeto serve de evidência. Os números dela, todos da mesma 
 **O que está errado**
 
 - A ResNet-18 tem cerca de 11 milhões de parâmetros. O treino tinha 960 imagens, 98 delas de COVID-19.
-- Com pesos aleatórios, a rede precisa aprender bordas e texturas a partir dessas imagens. Ela decora o treino: 100% de accuracy na época 9 da reprodução.
-- Pesos da ImageNet dão filtros iniciais prontos. Radiografia é um domínio distante, então o caso pede fine-tuning com learning rate baixa, como na regra da Atividade 3.
+- Com pesos aleatórios, a rede precisa aprender bordas e texturas a partir dessas imagens. Ela decora o treino: 100% de acurácia na época 9 da reprodução.
+- Pesos da ImageNet dão filtros iniciais prontos. Radiografia é um domínio distante, então o caso pede fine-tuning com taxa de aprendizado baixa, como na regra da Atividade 3.
 
 **Impacto clínico**
 
-- Um modelo que decorou 98 imagens de COVID-19 reconhece essas imagens. Pacientes novos, de outro equipamento ou com outro posicionamento, ficam fora do que ele aprendeu.
+- O impacto é o descrito no problema 5: os dois vêm de um modelo que decorou o treino.
 
-### 5. Overfitting visível, learning rate fixa e sem critério de parada
+### 5. Overfitting visível, taxa de aprendizado fixa e sem critério de parada
 
 **O que está errado**
 
 - O time reportou 93% no treino e 61% na validação: 32 pontos de diferença. O número já dizia que o modelo não generalizava.
-- A reprodução mostra o mesmo padrão em escala menor: 100% contra 89,6%. A perda de validação teve o mínimo na época 6 (0,295) e subiu até 0,325 na época 15, enquanto a de treino caiu para 0,010.
-- SGD sem momentum, com learning rate fixa de 0,01 e número fixo de épocas. Sem scheduler, sem weight decay, sem early stopping e sem escolha de checkpoint pela validação. O modelo entregue foi o da última época.
+- A reprodução mostra o mesmo padrão em escala menor. A perda de validação teve o mínimo na época 6 (0,295) e subiu até 0,325 na época 15, enquanto a de treino caiu para 0,010.
+- SGD sem momentum, com taxa de aprendizado fixa de 0,01 e número fixo de épocas. Sem scheduler, sem weight decay, sem early stopping e sem escolha de checkpoint pela validação. O modelo entregue foi o da última época.
 
 **Impacto clínico**
 
-- O modelo que chegou ao time clínico já tinha passado do melhor ponto. O custo de descobrir o problema ficou com quem atende pacientes.
+- O modelo decorou 98 imagens de COVID-19 e foi entregue depois do melhor ponto. Um paciente novo, de outro equipamento ou com outro posicionamento, tem a radiografia marcada como Normal e vai para o fim da fila de laudos. O time clínico só descobre quando os casos perdidos aparecem.
 
 ### 6. Sem augmentation
 
@@ -108,7 +108,7 @@ A reprodução do projeto serve de evidência. Os números dela, todos da mesma 
 **O que está errado**
 
 - O mesmo conjunto de validação serviu para acompanhar o treino e para reportar o resultado. Não havia teste separado.
-- Na reprodução, a accuracy caiu de 89,6% na validação para 76,4% no teste real, que tem 300 imagens por classe. A recall de COVID-19 foi parecida nos dois (0,41 e 0,37). A accuracy caiu porque o teste tem a mesma quantidade de cada classe e a validação tem 72,5% de Normal.
+- Na reprodução, a acurácia no teste real, que tem 300 imagens por classe, foi 76,4%, abaixo da de validação. A recall de COVID-19 foi parecida nos dois. A acurácia caiu porque o teste tem a mesma quantidade de cada classe e a validação é dominada por Normal.
 
 **Impacto clínico**
 
@@ -119,12 +119,12 @@ A reprodução do projeto serve de evidência. Os números dela, todos da mesma 
 **O que está errado**
 
 - O projeto não descreve verificação de cópias nem divisão por paciente.
-- Na base pública usada aqui havia 54 arquivos com conteúdo idêntico a outro. A Atividade 3 deste relatório mostrou o efeito de cópias entre treino e teste: um resultado que precisou ser descartado.
+- Na base pública usada aqui havia 54 arquivos com conteúdo idêntico a outro.
 - Um paciente internado faz várias radiografias. Se imagens do mesmo paciente caem no treino e na validação, o modelo é avaliado em alguém que já viu.
 
 **Impacto clínico**
 
-- A validação fica otimista. O desempenho em pacientes novos, que é o único que importa na triagem, fica abaixo do reportado.
+- Um paciente internado tem radiografias no treino e na validação. O modelo acerta esse paciente e a recall reportada sobe. Com pacientes novos na fila, mais casos saem como Normal do que a equipe espera, e ela confia em um resultado negativo que não merece essa confiança.
 
 ## A base de dados
 
@@ -145,7 +145,7 @@ A reprodução do projeto serve de evidência. Os números dela, todos da mesma 
 - **Teste real:** 300 imagens por classe, sorteadas entre as que sobraram. Nenhuma imagem está nos dois conjuntos. A base tem milhares de imagens a mais que o projeto, então a recall pode ser medida em 300 imagens de COVID-19. A validação tem 24.
 - **Treino e validação:** divisão 80/20 estratificada do conjunto do projeto. A reprodução do projeto original usa a divisão dele, sem estratificação.
 - **Controles de vazamento:** a GAN só vê o treino. Validação e teste nunca recebem imagem gerada. Todos os modelos são medidos no mesmo teste real.
-- Limite: só cópias exatas foram removidas. Quase-duplicatas não foram procuradas. Os arquivos usados não trazem identificador de paciente, então duas imagens do mesmo paciente podem estar em conjuntos diferentes. O problema 8 do diagnóstico vale também para este estudo.
+- Limite: só cópias exatas foram removidas, e os arquivos não trazem identificador de paciente. O problema 8 do diagnóstico vale também para este estudo.
 
 ## GAN condicional para a classe COVID-19
 
@@ -164,13 +164,13 @@ A reprodução do projeto serve de evidência. Os números dela, todos da mesma 
 
 - Entrada: a imagem de 64x64 e o rótulo.
 - Condicionamento: o rótulo vira um mapa aprendido de 64x64, empilhado na imagem como segundo canal. O discriminator julga se a imagem é real para aquela classe.
-- Quatro convoluções com stride 2 levam de 64x64 a 4x4, com 32, 64, 128 e 256 canais, batch normalization e LeakyReLU. Uma convolução final produz um logit.
+- Quatro convoluções com stride 2 levam de 64x64 a 4x4, com 32, 64, 128 e 256 canais, batch normalization a partir da segunda convolução e LeakyReLU. Uma convolução final produz um logit.
 
 **O loop adversarial, a cada batch**
 
 1. Passo do discriminator: recebe as imagens reais do batch com seus rótulos e imagens geradas com os mesmos rótulos. As geradas são produzidas sem gradiente, então esse passo não altera o generator. A perda é a entropia cruzada binária (BCE): alvo 1 para as reais e 0 para as geradas.
 2. Passo do generator: sorteia ruído novo, gera imagens e passa pelo discriminator já atualizado, com os pesos dele congelados. A perda é a BCE com alvo 1, a forma non-saturating: o generator ganha quando o discriminator chama as geradas de reais.
-3. Cada rede tem o seu otimizador Adam, com learning rate 0,0002 e betas (0,5, 0,999). Um passo de cada rede por batch.
+3. Cada rede tem o seu otimizador Adam, com taxa de aprendizado 0,0002 e betas (0,5, 0,999). Um passo de cada rede por batch.
 
 - Treino: 286 épocas, batch de 64, 15 batches por época, 0,66 segundo por época na T4.
 - O número de épocas veio do limite de tempo do notebook, que rodou em 23,2 minutos com pico de 656,5 MB de GPU.
@@ -192,7 +192,7 @@ A versão 1 é o baseline: a rede e o loop descritos acima, com os batches sorte
 
 - **Mode collapse no começo, em todas as seeds.** A diversidade fica perto de 0,01 até cerca da época 50. Na grade de imagens, as oito imagens de cada classe são iguais nas épocas 9 e 28.
 - **Saída do colapso desigual entre classes.** Normal sobe perto da época 50 e chega ao nível das imagens reais. Pneumonia sobe mais devagar. COVID-19 sobe por último e para longe da linha das reais.
-- **Sem divergência.** Nenhuma perda não finita. Na seed 42, a perda do discriminator termina em 0,44 e a do generator em 3,08. No gráfico, o escore médio fica perto de 0,85 para imagens reais e 0,15 para geradas no fim do treino.
+- **Sem divergência.** Nenhuma perda não finita. Na seed 42, a perda do discriminator termina em 0,44 e a do generator em 3,08. No gráfico, o escore médio fica perto de 0,83 para imagens reais e 0,17 para geradas no fim do treino.
 - **A classe minoritária é a menos diversa.** A razão média de COVID-19 foi 0,577, contra 0,999 em Normal e 0,822 em Pneumonia.
 - **Colapso parcial em uma seed.** Na seed 42 a razão de COVID-19 foi 0,498, logo abaixo do limite. A curva dessa seed cai depois da época 260: a diversidade vai de cerca de 0,15 para cerca de 0,07.
 
@@ -203,43 +203,24 @@ A versão 1 é o baseline: a rede e o loop descritos acima, com os batches sorte
 **Causa provável**
 
 - As imagens falsas de cada batch recebem os rótulos do batch real. COVID-19 tem 96 das 960 imagens, então só cerca de 10% das atualizações do generator são dessa classe.
-- A classe com menos imagens e menos atualizações é a que menos varia.
 
 ### Quatro mitigações tentadas
 
-Três foram testadas em execuções anteriores do notebook e saíram dele. Os números abaixo são dessas execuções, guardados no arquivo de resultados como `earlier_executions`. Cada célula mostra a razão de diversidade em Normal / Pneumonia / COVID-19.
+Três foram testadas em execuções anteriores do notebook e saíram dele. Os números são dessas execuções, guardados no arquivo de resultados como `earlier_executions`. São razões de diversidade em COVID-19, com uma seed por versão. Nas três execuções, o baseline BCE teve 0,66, 0,56 e 0,65.
 
-**Execuções anteriores com uma seed por versão**
-
-| Execução | Baseline BCE | Spectral normalization e hinge loss | WGAN-GP | Augmentation diferenciável |
-| --- | --- | --- | --- | --- |
-| 1 (64 canais) | 0,98 / 0,98 / 0,66 | 0,07 / 0,06 / 0,04 | não testada | não testada |
-| 2 (32 canais) | 0,96 / 0,92 / 0,56 | 0,05 / 0,06 / 0,04 | 0,84 / 0,82 / 0,76 | não testada |
-| 3 (32 canais) | 0,95 / 0,80 / 0,65 | 0,80 / 0,41 / 0,18 | 0,90 / 0,82 / 0,91 | 0,82 / 0,58 / 0,45 |
-
-**Execução anterior com três seeds e 240 épocas (média e desvio padrão em COVID-19)**
-
-| Versão | Seed 42 | Seed 43 | Seed 44 | Média | Desvio padrão |
-| --- | --- | --- | --- | --- | --- |
-| Baseline BCE | 0,607 | 0,535 | 0,632 | 0,591 | 0,051 |
-| WGAN-GP | 0,736 | 0,061 | 0,659 | 0,485 | 0,370 |
-
-1. **Spectral normalization com hinge loss e learning rates diferentes para as duas redes: falhou.** COVID-19 ficou colapsada nas três execuções.
-2. **Augmentation diferenciável (translação e brilho aleatórios antes do discriminator): falhou.** Ficou abaixo do baseline da mesma execução nas três classes.
-3. **WGAN-GP: falhou.** Com uma seed parecia a melhor versão. Com três seeds, a seed 43 ficou colapsada o treino inteiro e o desvio padrão foi sete vezes o do baseline.
+1. **Spectral normalization com hinge loss e taxas de aprendizado diferentes para as duas redes: falhou.** COVID-19 ficou colapsada nas três execuções: 0,04, 0,04 e 0,18.
+2. **Augmentation diferenciável (translação e brilho aleatórios antes do discriminator): falhou.** Testada na execução 3, teve 0,45 e ficou abaixo do baseline nas três classes.
+3. **WGAN-GP: falhou.** Com uma seed parecia a melhor versão: 0,76 e 0,91 nas execuções 2 e 3. Em uma execução anterior com três seeds e 240 épocas, a razão de COVID-19 foi 0,485 ± 0,370, contra 0,591 ± 0,051 no baseline. Das três seeds, a 43 terminou colapsada (razão 0,061).
 4. **Batches balanceados por classe: melhora parcial.** É a versão 2 do notebook, descrita abaixo.
 
 **Por que estabilizadores padrão podem falhar aqui**
 
-- São hipóteses. Nenhuma foi testada em separado.
-- O treino tem 960 imagens e 15 batches por época. Em 286 épocas são 4.290 passos. Essas técnicas foram propostas para datasets com dezenas de milhares de imagens e treinos muito mais longos.
-- Spectral normalization limita o quanto o discriminator pode mudar de opinião entre imagens parecidas. Com poucos passos, o sinal que chega ao generator fica fraco e ele não sai do colapso inicial.
-- WGAN-GP aprende mais devagar. Duas seeds saíram do colapso só na segunda metade do treino. A terceira não saiu em 240 épocas.
-- A ordem das versões mudava entre execuções com a mesma seed. A GPU não repete o treino de uma GAN bit a bit, e pequenas diferenças no começo crescem. O baseline com as seeds 42, 43 e 44 teve razão média de COVID-19 de 0,591 em uma execução e 0,577 na seguinte. Por isso a comparação final usa três seeds e olha média e desvio padrão.
+- Hipótese, não testada em separado: o treino é curto para essas técnicas. São 960 imagens e 15 batches por época, 4.290 passos em 286 épocas. Elas foram propostas para datasets com dezenas de milhares de imagens e treinos muito mais longos. Com poucos passos, o sinal que chega ao generator pode ficar fraco, e ele não sai do colapso inicial.
+- Os valores mudam de uma execução para outra. O baseline com 32 canais teve 0,56 na execução 2 e 0,65 na execução 3, com uma seed em cada. Uma hipótese é que a GPU não repete o treino de uma GAN bit a bit e que pequenas diferenças no começo crescem. O arquivo de resultados não registra se as duas execuções tinham as mesmas configurações. Por isso a comparação final usa três seeds e olha média e desvio padrão.
 
 ### Versão 2: batches balanceados por classe
 
-- Mesma rede, mesma perda e mesmas learning rates da versão 1. Muda só o sorteio: cada imagem é sorteada com reposição, com probabilidade inversa à frequência da sua classe. Cada classe passa a ter um terço esperado de cada batch.
+- Mesma rede, mesma perda e mesmas taxas de aprendizado da versão 1. Muda só o sorteio: cada imagem é sorteada com reposição, com probabilidade inversa à frequência da sua classe. Cada classe passa a ter um terço esperado de cada batch.
 - O número de batches por época fica igual. A mudança ataca a causa apontada no diagnóstico.
 
 **Razão de diversidade, três seeds (média ± desvio padrão amostral)**
@@ -255,7 +236,7 @@ Três foram testadas em execuções anteriores do notebook e saíram dele. Os n�
 **O que melhorou**
 
 - A estabilidade da classe minoritária entre seeds. O desvio padrão de COVID-19 caiu de 0,106 para 0,021, cerca de cinco vezes menor.
-- Nenhuma seed da versão 2 ficou colapsada em COVID-19. Na versão 1, uma ficou no limite.
+- Nenhuma seed da versão 2 ficou colapsada em COVID-19. Na versão 1, a seed contada como colapsada está no limite: 0,498, contra 0,5.
 
 **O que não foi mostrado**
 
@@ -263,13 +244,11 @@ Três foram testadas em execuções anteriores do notebook e saíram dele. Os n�
 
 **O que custou**
 
-- Normal e Pneumonia perderam cerca de metade da diversidade: Normal caiu de 0,999 para 0,538 e Pneumonia de 0,822 para 0,544. Cada imagem dessas classes passou a aparecer em menos atualizações.
+- Normal e Pneumonia perderam diversidade, como mostra a tabela. Cada imagem dessas classes passou a aparecer em menos atualizações.
 - No gráfico, a versão 2 fica mais tempo em colapso. Normal só sobe depois da época 100, e uma seed fica colapsada nas três classes até perto da época 180.
 - Nenhuma das duas versões diverge. As curvas de perda da seed 42 são parecidas.
 
 ![Versão 2, seed 42: imagens geradas com o mesmo ruído em seis épocas](figures/a4_gan_snapshots_v2.png)
-
-- Na época 286 da seed 42, a versão 1 tem as linhas de Normal e Pneumonia nítidas, com costelas, e a de COVID-19 cinza e granulada. Na versão 2, as imagens ainda são idênticas por classe na época 95. No fim, a linha de Normal está mais escura e borrada, e a de COVID-19 mostra melhor o contorno dos pulmões.
 
 **Versão escolhida para o experimento de recall**
 
@@ -294,15 +273,14 @@ Três foram testadas em execuções anteriores do notebook e saíram dele. Os n�
 **O que se vê nas imagens**
 
 - As reais são nítidas e variam bastante em contraste, enquadramento e posição do paciente.
-- As geradas mostram o contorno do tórax e dos pulmões, mas são granuladas e menos nítidas. Não se veem costelas nem detalhes finos.
-- Dentro de uma mesma seed, as oito imagens são parecidas entre si: o mesmo tórax com pequenas mudanças de brilho, nas duas versões. Nenhuma linha cobre a variedade das imagens reais.
+- As geradas mostram o contorno do tórax e dos pulmões, mas são granuladas, sem costelas nem detalhes finos. Dentro de uma mesma seed, as oito são parecidas entre si: o mesmo tórax com pequenas mudanças de brilho, nas duas versões.
 - Limite da medida: distância de pixels em 64x64 detecta cópia exata ou quase exata. Ela não mede se a imagem gerada mostra os sinais que um radiologista procura.
 
 ## Efeito das imagens sintéticas na recall
 
 **Classificador, igual nos três braços**
 
-- ResNet-18 com pesos da ImageNet, todas as camadas treinadas. Adam, learning rate 0,0001, 10 épocas, batch de 32.
+- ResNet-18 com pesos da ImageNet, todas as camadas treinadas. Adam, taxa de aprendizado 0,0001, 10 épocas, batch de 32.
 - Entrada de 64x64 ampliada para 128. Augmentation leve: translação de até 4 pixels e rotação de até 7 graus. Sem flip horizontal, porque esquerda e direita importam em uma radiografia de tórax.
 
 **Os três braços**
@@ -327,8 +305,7 @@ Três foram testadas em execuções anteriores do notebook e saíram dele. Os n�
 - Braço 2 menos braço 1: 0,080. O desvio padrão do braço 1 é 0,160.
 - Braço 3 menos braço 1: 0,153, ainda abaixo de 0,160.
 - Braço 3 menos braço 2: 0,073. O desvio padrão do braço 3 é 0,102.
-- Três seeds não estabelecem nada. Uma única seed do braço 1 (0,763) ficou acima da média dos outros dois braços.
-- O padrão que se repetiu em todas as execuções do notebook: o braço com pesos de classe teve a maior recall média de COVID-19. O braço com imagens sintéticas não manteve a posição: em uma execução anterior, com imagens de outra versão da GAN, ele ficou abaixo do braço 1.
+- Uma única seed do braço 1 (0,763) ficou acima da média dos outros dois braços.
 - O braço 2 teve o menor desvio padrão (0,044).
 
 **Confusão que não foi controlada**
@@ -344,38 +321,37 @@ Três foram testadas em execuções anteriores do notebook e saíram dele. Os n�
 | 2. Reais e sintéticas | 597 | 290 | 13 |
 | 3. Reais com pesos de classe | 662 | 224 | 14 |
 
-- Quase todo caso perdido de COVID-19 vira Normal, nos três braços. É o erro que tira o paciente da fila.
+- Quase todo caso perdido de COVID-19 vira Normal, nos três braços.
 - A precision de COVID-19 fica em 0,99 nos três braços. Quando o modelo diz COVID-19, quase sempre acerta. Ele diz pouco.
-- A precision de Normal é 0,649, 0,704 e 0,757. Um resultado Normal desses modelos não é confiável como resultado negativo.
+- A precision de Normal é 0,649, 0,704 e 0,757 no teste balanceado. Um resultado Normal desses modelos não é confiável como resultado negativo.
 - Mesmo o melhor braço perde em média 26% dos casos de COVID-19 do teste.
 
 **Conclusão para o plano**
 
 - Pesos de classe custam uma linha de código e nenhum treino extra. São a primeira coisa a tentar, junto com um protocolo correto.
-- A augmentation sintética fica como experimento a validar. Este estudo não mostrou que ela aumenta a recall.
+- Este estudo não mostrou que a augmentation sintética aumenta a recall.
 
 ## Plano de melhoria integrado
 
 | Problema do diagnóstico | Ação |
 | --- | --- |
 | 1. Desbalanceamento | Pesos de classe na perda como primeira medida. Coletar mais casos reais de COVID-19, que é a correção de fato. |
-| 2. Divisão sem estratificação | Divisão estratificada e por paciente. Validação cruzada com pelo menos 5 partes, para reportar média e intervalo. |
-| 3. Só accuracy | Métrica principal: recall de COVID-19 em uma specificity fixa. Reportar também precision, F1 e matriz de confusão por classe, com intervalo de confiança. |
-| 4. Sem pré-treinamento | ResNet-18 pré-treinada, com fine-tuning e learning rate baixa. Comparar com pesos pré-treinados em radiografias, se houver. |
-| 5. Overfitting e otimização | Adam ou SGD com momentum, scheduler de learning rate, weight decay, early stopping e escolha de checkpoint pela recall de validação. |
+| 2. Divisão sem estratificação | Divisão estratificada. Validação cruzada com pelo menos 5 partes, para reportar média e intervalo. |
+| 3. Só acurácia | Métrica principal: recall de COVID-19 em uma specificity fixa. Reportar também precision, F1 e matriz de confusão por classe, com intervalo de confiança. |
+| 4. Sem pré-treinamento | ResNet-18 pré-treinada, com fine-tuning e taxa de aprendizado baixa. Comparar com pesos pré-treinados em radiografias, se houver. |
+| 5. Overfitting e otimização | Adam ou SGD com momentum, scheduler de taxa de aprendizado, weight decay, early stopping e escolha de checkpoint pela recall de validação. |
 | 6. Sem augmentation | Translação, rotação leve, brilho e contraste. Sem flip horizontal. |
-| 7. Sem teste | Teste separado desde o início, usado uma única vez, e um teste externo de outro hospital. |
+| 7. Sem teste | Teste separado desde o início, usado uma única vez, e o teste externo descrito abaixo. |
 | 8. Cópias e pacientes | Remover cópias exatas e quase-duplicatas. Dividir por identificador de paciente. |
 
 **Modelo**
 
-- Entrada em resolução maior que 64x64. Achados de COVID-19 em radiografia são sutis e se perdem nessa redução.
+- Entrada em resolução maior que 64x64. É provável que achados sutis de COVID-19 em radiografia se percam nessa redução.
 - Limiar de decisão ajustado na validação para atingir a recall pedida.
 
 **Augmentation sintética**
 
-- Entra só depois das ações acima, como experimento.
-- Protocolo: a GAN treina só com o treino, com verificação de cópias, e as imagens geradas nunca entram em validação ou teste.
+- Entra só depois das ações acima, como experimento, com os controles de vazamento e a verificação de cópias deste estudo.
 - Comparação controlada: o braço com sintéticas contra um braço de imagens reais com o mesmo número de atualizações e contra o braço com pesos de classe, com pelo menos 5 seeds.
 - Critério para adotar: recall de COVID-19 maior que a do braço com pesos de classe, com diferença acima da variação entre seeds, no teste externo.
 
@@ -397,6 +373,6 @@ Os valores abaixo são propostas, a discutir e fechar com o time clínico.
 - **Resolução.** 64x64 pixels é muito menos do que um radiologista usa. A escolha veio do tempo de treino da GAN na T4.
 - **Uma base montada de várias fontes.** As classes da base vêm de coleções diferentes. Um classificador pode aprender a reconhecer a origem da imagem e usar isso como atalho. Esse efeito não foi medido, e o teste vem da mesma base.
 - **Três seeds.** Bastam para mostrar que a variação é grande. Não bastam para ordenar os braços nem as versões da GAN.
-- **Um sorteio do conjunto do projeto.** As 1.200 imagens foram sorteadas uma vez, com a seed 42. Outro sorteio daria outras 96 imagens de COVID-19 no treino.
-- **Teste balanceado.** O teste tem 300 imagens por classe. A accuracy e a precision medidas nele não valem para a proporção de casos de um hospital. A recall por classe não depende dessa proporção.
+- **Um sorteio do conjunto do projeto.** Outro sorteio daria outras 96 imagens de COVID-19 no treino.
+- **Teste balanceado.** O teste tem 300 imagens por classe. A acurácia e a precision medidas nele não valem para a proporção de casos de um hospital. A recall por classe não depende dessa proporção.
 - **Rótulos.** São os da base, sem revisão por radiologista.

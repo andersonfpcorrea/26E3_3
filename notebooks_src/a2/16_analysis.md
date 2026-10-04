@@ -9,12 +9,12 @@ A discussão completa, com os números desta execução, está na seção da Ati
 - A regra das miniaturas olha só o nome do arquivo. Em uma pequena parte dos pares a miniatura mostra uma figura diferente da do original, e essas imagens se perdem.
 - Sem a remoção, as buscas devolviam a imagem e a sua miniatura lado a lado, e as frequências das imagens de participantes ficavam infladas.
 
-**Threshold**
+**Limiar**
 
 - Um conceito conta como presente quando a sua probabilidade chega a 0,5, ou seja, quando ele tem mais probabilidade que todos os outros juntos. Cada imagem tem no máximo um conceito presente.
-- O histograma da maior probabilidade por imagem não tem vale nem degrau. Nenhum ponto da curva indica sozinho o threshold.
-- A decisão veio das imagens sorteadas em cada lado de 0,3, 0,5 e 0,7. O acerto dos rótulos sobe aos poucos com o threshold, e a parcela de imagens com algum conceito cai.
-- 0,5 é uma escolha de julgamento, feita sobre uma amostra pequena e avaliada por mim.
+- O histograma da maior probabilidade por imagem não tem vale nem degrau. Nenhum ponto da curva indica sozinho o limiar.
+- A decisão veio das imagens sorteadas em cada lado de 0,3, 0,5 e 0,7. O acerto dos rótulos sobe aos poucos com o limiar, e a parcela de imagens com algum conceito cai.
+- 0,5 é uma escolha de julgamento, sobre uma amostra pequena avaliada por mim.
 
 **Ranking**
 
@@ -27,8 +27,8 @@ A discussão completa, com os números desta execução, está na seção da Ati
 
 **Busca por texto**
 
-- Consultas concretas acham o que descrevem: "a car", "something healthy to eat", "an advertisement with a lot of text". Em "something healthy to eat" o mesmo brócolis aparece duas vezes, uma em baixa resolução, em arquivos sem ligação pelo nome.
-- Detalhes se perdem. Em "a red sports car on a road" nenhuma imagem é um carro esportivo vermelho: há um conversível cinza, um carro amarelo em uma rua alagada e um Mini vermelho, entre outras. Em "a happy family at home" há famílias, mas nenhuma foto dentro de casa.
+- Consultas concretas acham o que descrevem: "something healthy to eat", "an advertisement with a lot of text". Em "something healthy to eat" o mesmo brócolis aparece duas vezes, uma em baixa resolução, em arquivos sem ligação pelo nome.
+- Detalhes se perdem. Em "a red sports car on a road" nenhuma imagem é um carro esportivo vermelho: há um conversível cinza, um carro amarelo em uma rua alagada e um Mini vermelho, entre outras. Em "a happy family at home" há famílias, mas nenhuma dentro de casa.
 - Consultas abstratas ("luxury", "freedom", "loneliness", "technology that makes life easier") dão resultados fracos, simbólicos ou literais, como uma foto com a palavra FREEDOM escrita em um muro.
 - "um cachorro brincando na praia" devolve cachorros, mas só uma cena de praia. A quinta imagem é um borrão escuro e pixelado, que não dá para reconhecer como cachorro.
 - "uma pessoa sorrindo" devolve três pessoas sorrindo, uma mulher com a boca coberta por um cobertor e um rosto de meme de terror com um sorriso largo.
