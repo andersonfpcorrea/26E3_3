@@ -76,7 +76,7 @@ A reprodução do projeto serve de evidência. Os números dela, todos da mesma 
 
 - A ResNet-18 tem cerca de 11 milhões de parâmetros. O treino tinha 960 imagens, 98 delas de COVID-19.
 - Com pesos aleatórios, a rede precisa aprender bordas e texturas a partir dessas imagens. Ela decora o treino: 100% de acurácia na época 9 da reprodução.
-- Pesos da ImageNet dão filtros iniciais prontos. Radiografia é um domínio distante, então o caso pede fine-tuning com taxa de aprendizado baixa, como na regra da Atividade 3.
+- Pesos da ImageNet dão filtros iniciais prontos. Radiografia é um domínio distante, então o caso pede fine-tuning com taxa de aprendizado baixa. Aqui todas as camadas foram treinadas com taxa de aprendizado baixa, e treinar só os últimos blocos, como a regra da Atividade 3 indica para dados pequenos e distantes, é a alternativa a testar.
 
 **Impacto clínico**
 
@@ -192,7 +192,7 @@ A versão 1 é o baseline: a rede e o loop descritos acima, com os batches sorte
 
 ![Diversidade por época, um painel por classe, nas duas versões. Linha grossa: média das três seeds. Linhas finas: cada seed. Linha tracejada: diversidade das imagens reais](figures/a4_gan_diversity.png)
 
-- **Mode collapse no começo, em todas as seeds.** A diversidade fica entre 0,01 e 0,02 até cerca da época 50 e só passa de 0,05 entre as épocas 53 e 101, conforme a seed e a classe. Na grade de imagens, as oito imagens de cada classe são iguais nas épocas 9 e 28.
+- **Mode collapse no começo, em todas as seeds.** A diversidade fica entre 0,01 e 0,03 até cerca da época 50 e só passa de 0,05 entre as épocas 53 e 101, conforme a seed e a classe. Na grade de imagens, as oito imagens de cada classe são iguais nas épocas 9 e 28.
 - **Saída do colapso desigual entre classes.** Normal sobe perto da época 50 e chega ao nível das imagens reais. Pneumonia e COVID-19 sobem depois e param abaixo da linha das reais, COVID-19 mais longe.
 - **Sem divergência.** Nenhuma perda não finita. Na seed 42, a perda do discriminator termina em 0,47 e a do generator em 3,10. No gráfico, o escore médio fica perto de 0,82 para imagens reais e 0,18 para geradas no fim do treino.
 - **A classe minoritária é a menos diversa.** A razão média de COVID-19 foi 0,439, contra 0,956 em Normal e 0,890 em Pneumonia.
@@ -237,13 +237,14 @@ Três foram testadas em execuções anteriores do notebook e saíram dele. Os n�
 
 **O que melhorou**
 
-- A diversidade média de COVID-19 subiu 0,261, de 0,439 para 0,700. As três seeds da versão 2 (0,658 a 0,744) ficaram acima das três da versão 1 (0,303 a 0,602).
+- Nesta execução, a diversidade média de COVID-19 subiu 0,261, de 0,439 para 0,700. As três seeds da versão 2 (0,658 a 0,744) ficaram acima das três da versão 1 (0,303 a 0,602).
 - A estabilidade da classe minoritária entre seeds. O desvio padrão de COVID-19 caiu de 0,151 para 0,043, cerca de 3,5 vezes menor.
 - Nenhuma seed da versão 2 ficou colapsada em COVID-19. Na versão 1, duas de três ficaram (0,412 e 0,303).
 
 **O que não foi mostrado**
 
-- Que a melhora venha só do balanceamento. A versão 1 desta execução ficou em 0,439, abaixo das três execuções anteriores do baseline (0,66, 0,56 e 0,65, com uma seed cada). Parte da distância para a versão 2 pode vir da variação entre execuções da GAN.
+- Que a melhora venha só do balanceamento, nem o tamanho dela. A execução anterior deste notebook, com as mesmas configurações e as mesmas seeds, deu 0,577 ± 0,106 na versão 1 e 0,660 ± 0,021 na versão 2: um ganho de 0,083, menor que o desvio padrão da versão 1. Nesta execução o ganho foi 0,261. A versão 2 mudou pouco entre as duas execuções (0,660 e 0,700). A versão 1 mudou muito (0,577 e 0,439) e ficou abaixo das três execuções anteriores do baseline com uma seed (0,66, 0,56 e 0,65). Parte da distância desta execução vem da variação entre execuções da GAN.
+- O que se repetiu nas duas execuções: nenhuma seed da versão 2 colapsou em COVID-19 (0 de 6), contra 3 de 6 na versão 1, e o desvio padrão da versão 2 foi o menor. Os números da execução anterior não estão no arquivo de resultados desta execução.
 
 **O que custou**
 
@@ -269,7 +270,7 @@ Três foram testadas em execuções anteriores do notebook e saíram dele. Os n�
 
 - Nenhuma imagem gerada ficou mais perto do treino que a imagem real de validação mais próxima. A parcela foi 0. Não há sinal de cópia.
 - As geradas ficam um pouco mais longe do treino que as reais de validação. Parte dessa distância é ruído.
-- Segundo controle: balancear poderia aumentar a diversidade só por gerar ruído. A distância média por seed foi 0,112, 0,128 e 0,107 na versão 1 e 0,125, 0,098 e 0,134 na versão 2. A versão 2 não está mais longe das imagens reais que a versão 1.
+- Segundo controle: balancear poderia aumentar a diversidade só por gerar ruído. A distância média por seed foi 0,112, 0,128 e 0,107 na versão 1 e 0,125, 0,098 e 0,134 na versão 2. As médias são 0,116 e 0,119: a diferença é menor que a variação entre seeds.
 
 ![Primeira linha: COVID-19 reais do treino. Demais linhas: imagens geradas por cada versão e seed](figures/a4_real_vs_synthetic.png){: width="499"}
 
@@ -301,15 +302,16 @@ Três foram testadas em execuções anteriores do notebook e saíram dele. Os n�
 | 2. Reais e sintéticas | 0,992 ± 0,004 | 0,916 ± 0,033 | 0,571 ± 0,095 | 0,640 / 0,610 / 0,463 |
 | 3. Reais com pesos de classe | 0,977 ± 0,015 | 0,948 ± 0,027 | 0,787 ± 0,074 | 0,810 / 0,703 / 0,847 |
 
-**O braço com pesos de classe fica acima dos outros dois por mais que o desvio padrão de cada um. Os braços 1 e 2 não se distinguem.**
+**Nesta execução, o braço com pesos de classe fica acima dos outros dois por mais que o desvio padrão de cada um. Na execução anterior, com as mesmas configurações, o braço com pesos de classe também era o mais alto, mas a diferença ficava dentro do desvio. Os braços 1 e 2 não se distinguem.**
 
 ![Recall por classe nos três braços, com o desvio padrão entre seeds](figures/a4_recall_arms.png)
 
 - Braço 2 menos braço 1: -0,014. O desvio padrão do braço 1 é 0,138.
 - Braço 3 menos braço 1: 0,201, acima de 0,138.
 - Braço 3 menos braço 2: 0,216. Os desvios padrão dos braços 2 e 3 são 0,095 e 0,074.
+- Execução anterior, mesmas seeds: 0,583 ± 0,160, 0,663 ± 0,044 e 0,736 ± 0,102. O braço 3 menos o braço 1 dava 0,153, abaixo do desvio padrão do braço 1. O braço 2 ficava 0,080 acima do braço 1 e nesta execução ficou 0,014 abaixo: o sinal trocou.
 - Com três seeds a separação não é total: a pior seed do braço 3 (0,703) ficou abaixo da melhor seed do braço 1 (0,713).
-- O braço 3 teve o menor desvio padrão (0,074).
+- Nesta execução, o braço 3 teve o menor desvio padrão (0,074). Na anterior foi o braço 2.
 
 **Confusão que não foi controlada**
 
@@ -332,7 +334,7 @@ Três foram testadas em execuções anteriores do notebook e saíram dele. Os n�
 **Conclusão para o plano**
 
 - Pesos de classe custam uma linha de código e nenhum treino extra. São a primeira coisa a tentar, junto com um protocolo correto.
-- Este estudo não mostrou que a augmentation sintética aumenta a recall: a do braço 2 (0,571) ficou igual à do braço 1 (0,586), dentro da variação entre seeds. O braço com pesos de classe teve a maior recall de COVID-19 (0,787).
+- Este estudo não mostrou que a augmentation sintética aumenta a recall: a do braço 2 (0,571) ficou 0,014 abaixo da do braço 1 (0,586), diferença muito menor que a variação entre seeds. O braço com pesos de classe teve a maior recall de COVID-19 nas duas execuções (0,736 e 0,787).
 
 ## Plano de melhoria integrado
 
