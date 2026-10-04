@@ -5,6 +5,7 @@ from collections import defaultdict
 from io import BytesIO
 from pathlib import Path
 from random import Random
+from unicodedata import combining, normalize
 
 import numpy as np
 import torch
@@ -88,22 +89,37 @@ def download_wikiart(destination: Path) -> list[Path]:
 
 
 def read_metadata(parquet_paths) -> dict[str, list]:
-    """Reads the year, artist and style of every painting, without the images.
+    """Reads the year, artist, style and title of every painting, without the images.
 
-    Only the ``date``, ``artist`` and ``style`` columns are read. The result
-    holds parallel lists under ``year`` (int or None), ``artist``, ``style``
-    and ``row``, the global row number counted across the files in path order.
+    Only the ``date``, ``artist``, ``style`` and ``title`` columns are read.
+    The result holds parallel lists under ``year`` (int or None), ``artist``,
+    ``style``, ``title`` and ``row``, the global row number counted across the
+    files in path order.
     """
-    metadata = {"year": [], "artist": [], "style": [], "row": []}
+    metadata = {"year": [], "artist": [], "style": [], "title": [], "row": []}
     offset = 0
     for path in parquet_paths:
-        table = read_table(path, columns=["date", "artist", "style"])
+        table = read_table(path, columns=["date", "artist", "style", "title"])
         metadata["year"].extend(parse_year(value) for value in table.column("date").to_pylist())
         metadata["artist"].extend(table.column("artist").to_pylist())
         metadata["style"].extend(table.column("style").to_pylist())
+        metadata["title"].extend(table.column("title").to_pylist())
         metadata["row"].extend(range(offset, offset + table.num_rows))
         offset += table.num_rows
     return metadata
+
+
+def row_group_sizes(parquet_paths) -> list[list[int]]:
+    """Returns the number of rows of every row group, one list per file.
+
+    ``read_images`` loads one row group at a time, so the largest group sets
+    how much memory a read needs. Only the file footers are read.
+    """
+    sizes = []
+    for path in parquet_paths:
+        details = ParquetFile(path).metadata
+        sizes.append([details.row_group(index).num_rows for index in range(details.num_row_groups)])
+    return sizes
 
 
 def select_balanced(labels: list[int | None], per_class: int, seed: int) -> list[int]:
@@ -129,6 +145,25 @@ def is_unknown_artist(name) -> bool:
     """Tells whether an artist value is empty or some spelling of "unknown"."""
     text = str(name).strip().lower() if name is not None else ""
     return text in UNKNOWN_ARTIST_NAMES or text.startswith("unknown")
+
+
+def spelling_variants(names) -> list[list[str]]:
+    """Finds names written in more than one way.
+
+    Two spellings are taken as the same name when they match after ignoring
+    case, accents, punctuation, spacing and word order, so ``Monet, Claude``
+    and ``claude-monet`` fall together. Returns one sorted list of spellings
+    for every name that has at least two, ordered by first spelling. Empty
+    names and ``None`` are skipped. Nothing is merged or corrected here.
+    """
+    spellings = defaultdict(set)
+    for name in names:
+        text = str(name).strip() if name is not None else ""
+        plain = "".join(letter for letter in normalize("NFKD", text) if not combining(letter))
+        key = " ".join(sorted(re.sub(r"[^0-9a-z]+", " ", plain.casefold()).split()))
+        if key:
+            spellings[key].add(text)
+    return sorted(sorted(group) for group in spellings.values() if len(group) > 1)
 
 
 def split_by_group(
@@ -271,3 +306,45 @@ def accuracy_by_group(targets, predictions, groups, minimum: int = 20) -> list[d
             }
         )
     return sorted(entries, key=lambda entry: (-entry["count"], str(entry["group"])))
+
+
+def evenly_spread(items: list, count: int) -> list:
+    """Picks ``count`` items at even steps from first to last, or all when there are fewer."""
+    if len(items) <= count:
+        return list(items)
+    if count == 1:
+        return [items[0]]
+    return [items[round(step * (len(items) - 1) / (count - 1))] for step in range(count)]
+
+
+def select_examples(targets, predictions, per_outcome: int = 3) -> list[int]:
+    """Chooses samples to show: correct predictions first, then wrong ones.
+
+    For each outcome up to ``per_outcome`` samples are taken from classes
+    spread evenly over the class order, the first sample of each class. Wrong
+    predictions come from classes not used by the correct ones when enough
+    remain, so the examples cover as many classes as possible. When an outcome
+    has too few classes, its next samples in order fill the gap, and the list
+    is shorter when an outcome has too few samples. The choice depends only on
+    the inputs. Returns the indices, each outcome ordered by class.
+    """
+    targets = [int(target) for target in targets]
+    predictions = [int(prediction) for prediction in predictions]
+    used_classes = set()
+    chosen = []
+    for correct in (True, False):
+        candidates = [
+            index for index, (target, prediction) in enumerate(zip(targets, predictions))
+            if (target == prediction) == correct
+        ]
+        first_of_class = {}
+        for index in candidates:
+            first_of_class.setdefault(targets[index], index)
+        classes = sorted(first_of_class)
+        unused = [label for label in classes if label not in used_classes]
+        pool = unused if len(unused) >= per_outcome else classes
+        picked = [first_of_class[label] for label in evenly_spread(pool, per_outcome)]
+        picked.extend([index for index in candidates if index not in picked][: per_outcome - len(picked)])
+        used_classes.update(targets[index] for index in picked)
+        chosen.extend(sorted(picked, key=lambda index: (targets[index], index)))
+    return chosen

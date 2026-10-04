@@ -22,7 +22,10 @@ from dlv.paintings import (
     period_of,
     read_images,
     read_metadata,
+    row_group_sizes,
     select_balanced,
+    select_examples,
+    spelling_variants,
     split_by_group,
 )
 
@@ -116,6 +119,12 @@ def test_read_metadata_numbers_rows_across_files(parquet_files):
     assert metadata["year"] == [1920, 1997, 1904, None, 1500, 1850, None, 1700, 1999]
     assert metadata["artist"] == list("ABCDEFGHI")
     assert metadata["style"] == list("vwxyzpqrs")
+    assert metadata["title"] == ["t0", "t1", "t2", "t3", "t4", "t0", "t1", "t2", "t3"]
+
+
+def test_row_group_sizes_lists_the_rows_of_every_group(parquet_files):
+    """Each file reports the row count of its row groups, in order."""
+    assert row_group_sizes(parquet_files) == [[2, 2, 1], [3, 1]]
 
 
 def test_read_images_keeps_the_order_given(parquet_files):
@@ -329,3 +338,64 @@ def test_accuracy_by_group_applies_the_minimum():
     predictions = [0] * 39
     assert [entry["group"] for entry in accuracy_by_group(targets, predictions, groups)] == ["a"]
     assert accuracy_by_group(targets, predictions, groups, minimum=40) == []
+
+
+def test_select_examples_takes_hits_then_misses_from_different_classes():
+    """Three hits and three misses come from six different true classes when possible."""
+    targets = [label for label in range(8) for _ in range(4)]
+    predictions = [label if position % 2 == 0 else (label + 1) % 8 for position, label in enumerate(targets)]
+    chosen = select_examples(targets, predictions, per_outcome=3)
+    hits, misses = chosen[:3], chosen[3:]
+    assert len(chosen) == 6
+    assert all(targets[index] == predictions[index] for index in hits)
+    assert all(targets[index] != predictions[index] for index in misses)
+    assert len({targets[index] for index in chosen}) == 6
+    assert [targets[index] for index in hits] == [0, 4, 7]
+
+
+def test_select_examples_takes_the_first_sample_of_each_chosen_class():
+    """Within a class, the sample with the lowest index is the one chosen."""
+    targets = [0, 0, 1, 1, 2, 2]
+    predictions = [0, 0, 0, 0, 2, 2]
+    assert select_examples(targets, predictions, per_outcome=1) == [0, 2]
+
+
+def test_select_examples_is_deterministic():
+    """The same inputs always give the same choice."""
+    targets = [3, 1, 2, 0, 3, 1, 2, 0]
+    predictions = [3, 0, 2, 1, 0, 1, 0, 0]
+    assert select_examples(targets, predictions, 2) == select_examples(targets, predictions, 2)
+
+
+def test_select_examples_reuses_classes_and_returns_fewer_when_short():
+    """With few classes or few hits, classes repeat and the list may be shorter."""
+    targets = [0, 0, 0, 1, 1]
+    predictions = [0, 0, 1, 0, 0]
+    chosen = select_examples(targets, predictions, per_outcome=3)
+    assert chosen == [0, 1, 2, 3, 4]
+    assert select_examples([0, 1], [0, 1], per_outcome=3) == [0, 1]
+    assert select_examples([], [], per_outcome=3) == []
+
+
+def test_spelling_variants_groups_names_that_differ_only_in_form():
+    """Case, accents, punctuation, spacing and word order do not make a new painter."""
+    names = [
+        "Claude Monet",
+        "claude monet",
+        "Monet, Claude",
+        "Paul Cézanne",
+        "Paul Cezanne",
+        "Edgar Degas",
+        "claude-monet",
+        None,
+        "Claude Monet",
+    ]
+    assert spelling_variants(names) == [
+        ["Claude Monet", "Monet, Claude", "claude monet", "claude-monet"],
+        ["Paul Cezanne", "Paul Cézanne"],
+    ]
+
+
+def test_spelling_variants_is_empty_when_every_name_has_one_form():
+    """Distinct painters, repeated or not, give no variant group."""
+    assert spelling_variants(["A B", "A B", "C D", "", None]) == []
