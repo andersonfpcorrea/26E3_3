@@ -5,7 +5,6 @@ from pathlib import Path
 import torch
 from PIL import Image
 from torch import Tensor
-from torch.nn.functional import normalize
 from transformers import CLIPModel, CLIPProcessor
 
 from dlv.data import file_digest, is_readable_image
@@ -51,6 +50,11 @@ def load_clip(device) -> tuple:
     return model, processor
 
 
+def unit_rows(tensor: Tensor) -> Tensor:
+    """Scales every row of a matrix to unit length."""
+    return tensor / tensor.norm(dim=-1, keepdim=True).clamp_min(1e-12)
+
+
 def projected_features(output) -> Tensor:
     """Returns the projected embeddings from a CLIP feature call, whatever the library version returns."""
     return output if isinstance(output, Tensor) else output.pooler_output
@@ -70,7 +74,7 @@ def embed_images(model, processor, paths: list[Path], device, batch_size: int = 
                 images.append(image.convert("RGB"))
         pixel_values = processor(images=images, return_tensors="pt")["pixel_values"].to(device)
         features = projected_features(model.get_image_features(pixel_values=pixel_values))
-        batches.append(normalize(features.float(), dim=-1).cpu())
+        batches.append(unit_rows(features.float()).cpu())
     if not batches:
         return torch.empty(0, 0)
     return torch.cat(batches)
@@ -87,7 +91,8 @@ def embed_texts(model, processor, texts: list[str], device) -> Tensor:
     lengths = processor(text=texts, padding=False, truncation=False)["input_ids"]
     for text, ids in zip(texts, lengths):
         if len(ids) > limit:
-            print(f"Warning: text truncated to {limit} tokens ({len(ids)} needed): {text!r}")
+            shown = text[:60] + ("..." if len(text) > 60 else "")
+            print(f"Warning: text truncated to {limit} tokens ({len(ids)} needed): {shown!r}")
     encoded = processor(text=texts, padding=True, truncation=True, return_tensors="pt")
     features = projected_features(
         model.get_text_features(
@@ -95,14 +100,20 @@ def embed_texts(model, processor, texts: list[str], device) -> Tensor:
             attention_mask=encoded["attention_mask"].to(device),
         )
     )
-    return normalize(features.float(), dim=-1).cpu()
+    return unit_rows(features.float()).cpu()
 
 
-def cached(path: Path, compute) -> Tensor:
-    """Loads the tensor stored at ``path``, or calls ``compute()``, saves its result there and returns it."""
+def cached(path: Path, compute, expected_rows: int | None = None) -> Tensor:
+    """Loads the tensor stored at ``path``, or calls ``compute()``, saves its result there and returns it.
+
+    When ``expected_rows`` is given and the stored tensor has a different
+    number of rows, the file is stale: it is recomputed and overwritten.
+    """
     path = Path(path)
     if path.exists():
-        return torch.load(path)
+        stored = torch.load(path)
+        if expected_rows is None or stored.shape[0] == expected_rows:
+            return stored
     result = compute()
     path.parent.mkdir(parents=True, exist_ok=True)
     torch.save(result, path)
@@ -110,8 +121,13 @@ def cached(path: Path, compute) -> Tensor:
 
 
 def similarity_matrix(image_embeddings: Tensor, text_embeddings: Tensor) -> Tensor:
-    """Returns the cosine similarity of every image to every text, shaped (images, texts)."""
-    return normalize(image_embeddings, dim=-1) @ normalize(text_embeddings, dim=-1).T
+    """Returns the cosine similarity of every image to every text, shaped (images, texts).
+
+    When either side has no rows the result is an empty matrix of that shape.
+    """
+    if image_embeddings.shape[0] == 0 or text_embeddings.shape[0] == 0:
+        return torch.empty(image_embeddings.shape[0], text_embeddings.shape[0])
+    return unit_rows(image_embeddings) @ unit_rows(text_embeddings).T
 
 
 def concept_probabilities(similarity: Tensor, logit_scale: float = 100.0) -> Tensor:

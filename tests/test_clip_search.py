@@ -17,6 +17,7 @@ from dlv.clip_search import (
     search,
     similarity_matrix,
     top_images,
+    unit_rows,
 )
 
 
@@ -286,3 +287,46 @@ def test_describe_tokens_with_fake_tokenizer():
     assert description[0]["padding"] == 2
     assert description[1]["padding"] == 0
     assert description[1]["tokens"] == ["a", "red", "car", "on"]
+
+
+def test_unit_rows_scales_each_row_to_length_one():
+    """Every row is divided by its own norm."""
+    rows = unit_rows(torch.tensor([[3.0, 4.0], [0.0, 2.0]]))
+    assert torch.allclose(rows, torch.tensor([[0.6, 0.8], [0.0, 1.0]]))
+
+
+def test_truncation_warning_shortens_long_text_and_gives_token_counts(capsys):
+    """The warning shows at most 60 characters, an ellipsis and the token counts."""
+    long_text = " ".join(["car"] * 40)
+    embed_texts(FakeClip(), FakeProcessor(), [long_text], "cpu")
+    printed = capsys.readouterr().out
+    assert long_text not in printed
+    assert long_text[:60] in printed
+    assert "..." in printed
+    assert "40" in printed and "4" in printed
+
+
+def test_embedding_nothing_gives_an_empty_matrix_and_similarity_stays_empty(tmp_path):
+    """Empty inputs give empty embeddings, and similarity has zero rows or columns."""
+    images = embed_images(FakeClip(), FakeProcessor(), [], "cpu")
+    assert images.shape[0] == 0
+    texts = torch.tensor([[1.0, 0.0], [0.0, 1.0]])
+    assert similarity_matrix(images, texts).shape == (0, 2)
+    assert similarity_matrix(texts, images).shape == (2, 0)
+
+
+def test_cached_recomputes_when_row_count_changed(tmp_path):
+    """A cached tensor with a different row count is replaced."""
+    path = tmp_path / "e.pt"
+    cached(path, lambda: torch.zeros(3, 2))
+    fresh = cached(path, lambda: torch.ones(5, 2), expected_rows=5)
+    assert fresh.shape == (5, 2)
+    assert cached(path, lambda: torch.zeros(1, 2)).shape == (5, 2)
+
+
+def test_cached_reuses_matching_rows_and_ignores_none(tmp_path):
+    """A matching row count, or no expectation, reuses the file."""
+    path = tmp_path / "e.pt"
+    cached(path, lambda: torch.zeros(3, 2))
+    assert cached(path, lambda: torch.ones(9, 2), expected_rows=3).shape == (3, 2)
+    assert cached(path, lambda: torch.ones(9, 2), expected_rows=None).shape == (3, 2)
