@@ -3,11 +3,24 @@ from dlv.run import save_run
 gan_metrics = {
     key: {
         "name": settings["name"],
-        "hyperparameters": {**settings, "epochs": GAN_EPOCHS, "batch_size": GAN_BATCH_SIZE, "base_channels": GAN_BASE_CHANNELS},
-        "history": {name: values for name, values in histories[key].items() if name != "snapshots"},
-        "final_diversity": diagnosis[key]["final_diversity"],
-        "diagnosis": diagnosis[key],
-        "seconds_per_epoch": round(stopwatch.seconds[f"treino da GAN {key}"] / GAN_EPOCHS, 3),
+        "hyperparameters": {
+            **settings,
+            "epochs": GAN_EPOCHS,
+            "batch_size": GAN_BATCH_SIZE,
+            "base_channels": GAN_BASE_CHANNELS,
+            "seeds": list(GAN_SEEDS),
+        },
+        "histories": {
+            gan_seed: {name: values for name, values in histories[key][gan_seed].items() if name != "snapshots"}
+            for gan_seed in GAN_SEEDS
+        },
+        "diagnoses": diagnoses[key],
+        "summary": summaries[key],
+        "seconds_per_epoch": round(
+            sum(stopwatch.seconds[f"treino da GAN {key}, seed {gan_seed}"] for gan_seed in GAN_SEEDS)
+            / (GAN_EPOCHS * len(GAN_SEEDS)),
+            3,
+        ),
     }
     for key, settings in GAN_VERSIONS.items()
 }
@@ -35,6 +48,14 @@ metrics = {
     },
     "gan": gan_metrics,
     "real_diversity": real_diversity,
+    "chosen_version": {
+        "version": chosen_version,
+        "rule": CHOICE_RULE,
+        "class": CLASS_NAMES[COVID_LABEL],
+        "mean_ratio": choice["means"],
+        "std_ratio": {key: summaries[key]["diversity_ratio_std"][COVID_LABEL] for key in GAN_VERSIONS},
+    },
+    "earlier_executions": EARLIER_EXECUTIONS,
     "memorisation": memorisation,
     "arms": {
         arm: {"runs": arm_runs[arm], "summary": arm_summaries[arm]} for arm in ARMS
@@ -62,7 +83,8 @@ metrics = {
             "input_size": CLASSIFIER_INPUT_SIZE,
             "seeds": list(CLASSIFIER_SEEDS),
             "augmentation": f"shift up to {MAX_SHIFT_PIXELS} px, rotation up to {MAX_ROTATION_DEGREES} degrees, no flip",
-            "synthetic_covid": synthetic_count,
+            "synthetic_covid_per_seed": synthetic_count,
+            "synthetic_pairing": "classifier seed i uses the GAN of seed i",
         },
     },
     "step_seconds": stopwatch.seconds,

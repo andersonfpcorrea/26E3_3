@@ -20,9 +20,10 @@ ORIGINAL_EPOCHS = 15
 ORIGINAL_BATCH_SIZE = 32
 ORIGINAL_LEARNING_RATE = 0.01
 
-GAN_EPOCHS = 300
+GAN_EPOCHS = 240
 GAN_BATCH_SIZE = 64
 GAN_BASE_CHANNELS = 32
+GAN_SEEDS = (42, 43, 44)
 GAN_VERSIONS = {
     "v1": {
         "name": "Versão 1 (BCE)",
@@ -35,17 +36,6 @@ GAN_VERSIONS = {
         "generator_lr": 2e-4,
         "discriminator_lr": 2e-4,
     },
-    "v2": {
-        "name": "Versão 2 (hinge, normalização espectral)",
-        "spectral_norm": True,
-        "loss": "hinge",
-        "batch_norm": False,
-        "gradient_penalty_weight": 0.0,
-        "augment": False,
-        "betas": (0.5, 0.999),
-        "generator_lr": 1e-4,
-        "discriminator_lr": 4e-4,
-    },
     "v3": {
         "name": "Versão 3 (WGAN-GP)",
         "spectral_norm": False,
@@ -57,16 +47,29 @@ GAN_VERSIONS = {
         "generator_lr": 1e-4,
         "discriminator_lr": 1e-4,
     },
-    "v4": {
-        "name": "Versão 4 (BCE com aumento diferenciável)",
-        "spectral_norm": False,
-        "loss": "bce",
-        "batch_norm": True,
-        "gradient_penalty_weight": 0.0,
-        "augment": True,
-        "betas": (0.5, 0.999),
-        "generator_lr": 2e-4,
-        "discriminator_lr": 2e-4,
+}
+EARLIER_EXECUTIONS = {
+    "description": "Execuções anteriores de versões anteriores deste notebook, com uma seed por versão. Razão entre a diversidade gerada e a real na última décima parte das épocas. Não são resultados desta execução.",
+    "classes": ["Normal", "Pneumonia", "COVID-19"],
+    "executions": {
+        "1 (64 canais)": {
+            "v1 BCE": [0.98, 0.98, 0.66],
+            "v2 normalização espectral e hinge": [0.07, 0.06, 0.04],
+            "v3 WGAN-GP": None,
+            "v4 BCE com aumento diferenciável": None,
+        },
+        "2 (32 canais)": {
+            "v1 BCE": [0.96, 0.92, 0.56],
+            "v2 normalização espectral e hinge": [0.05, 0.06, 0.04],
+            "v3 WGAN-GP": [0.84, 0.82, 0.76],
+            "v4 BCE com aumento diferenciável": None,
+        },
+        "3 (32 canais)": {
+            "v1 BCE": [0.95, 0.80, 0.65],
+            "v2 normalização espectral e hinge": [0.80, 0.41, 0.18],
+            "v3 WGAN-GP": [0.90, 0.82, 0.91],
+            "v4 BCE com aumento diferenciável": [0.82, 0.58, 0.45],
+        },
     },
 }
 
@@ -74,7 +77,7 @@ CLASSIFIER_EPOCHS = 10
 CLASSIFIER_BATCH_SIZE = 32
 CLASSIFIER_LEARNING_RATE = 1e-4
 CLASSIFIER_INPUT_SIZE = 128
-CLASSIFIER_SEEDS = (42, 43, 44)
+CLASSIFIER_SEEDS = GAN_SEEDS
 MAX_SHIFT_PIXELS = 4.0
 MAX_ROTATION_DEGREES = 7.0
 

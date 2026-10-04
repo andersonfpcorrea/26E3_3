@@ -13,7 +13,7 @@ def train_arm(settings, seed):
     seed_everything(seed)
     images, targets = train_images, train_labels.tolist()
     if settings["synthetic"]:
-        images, targets = mix_synthetic(train_images, targets, synthetic_covid, COVID_LABEL)
+        images, targets = mix_synthetic(train_images, targets, synthetic_by_seed[seed], COVID_LABEL)
     weights = inverse_frequency_weights(targets, len(CLASS_NAMES)) if settings["weighted"] else None
     model = build_resnet18(len(CLASS_NAMES), pretrained=True).to(DEVICE)
     optimizer = torch.optim.Adam(model.parameters(), lr=CLASSIFIER_LEARNING_RATE)

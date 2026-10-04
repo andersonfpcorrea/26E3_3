@@ -1,4 +1,5 @@
-## Memorização e escolha da versão
+## Escolha da versão e memorização
 
-- **Escolha, fixada antes de ver os resultados:** a versão cuja diversidade final fica mais perto da diversidade das imagens reais, em média nas três classes. A leitura dos grupos de imagens a olho está no relatório
-- **Memorização:** para cada imagem sintética de COVID-19, a distância média de pixels até a imagem real de COVID-19 mais próxima no treino. Para ter uma régua, a mesma conta é feita com as imagens reais de COVID-19 da validação contra as do treino. Se as sintéticas estivessem coladas no treino, a distância delas seria bem menor que a das reais de validação
+- **Regra de escolha, fixada antes de ver os resultados e antes do experimento de revocação:** a versão com a maior razão média de diversidade na classe COVID-19, em média entre as três seeds. Se a diferença entre as médias for menor que o desvio padrão entre seeds, a regra ainda escolhe uma versão, e o relatório diz que a diferença está dentro da variação
+- **Memorização:** para cada imagem sintética de COVID-19 da versão escolhida, nas três seeds juntas, a distância média de pixels até a imagem real de COVID-19 mais próxima no treino. Para ter uma régua, a mesma conta é feita com as imagens reais de COVID-19 da validação contra as do treino. Se as sintéticas estivessem coladas no treino, a distância delas seria bem menor que a das reais de validação
+- **Braço 2 da Parte D:** o classificador da seed i usa as imagens sintéticas geradas pela GAN da seed i
