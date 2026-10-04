@@ -161,8 +161,8 @@ O modelo está em `src/dlv/vit.py`, classe `VisionTransformer`. O caminho da ima
 
 **Custo da execução final**
 
-- Notebook inteiro: 866,6 segundos (14,4 minutos) na T4.
-- Pico de memória: 3.971,6 MB na GPU e 2.867,3 MB de RAM.
+- Notebook inteiro: 963,4 segundos (16,1 minutos) na T4.
+- Pico de memória: 3.971,6 MB na GPU e 3.033,4 MB de RAM.
 
 ## Resultados
 
@@ -170,9 +170,9 @@ O modelo está em `src/dlv/vit.py`, classe `VisionTransformer`. O caminho da ima
 
 | Modelo | Acurácia | Acertos | Acerto com tolerância de 1 período | F1 macro | Distância média | Parâmetros | Treino |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| ViT do zero | 32,50% | 780 | 64,0% | 0,320 | 1,49 | 2.720.840 | 277,4 s |
-| ViT do zero sem posição | 32,46% | 779 | 64,5% | 0,322 | 1,47 | 2.708.360 | 280,1 s |
-| ViT-B/16 pré-treinado | 47,38% | 1.137 | 80,2% | 0,458 | 0,93 | 85.804.808 | 236,0 s |
+| ViT do zero | 32,50% | 780 | 64,0% | 0,320 | 1,49 | 2.720.840 | 304,6 s |
+| ViT do zero sem posição | 32,46% | 779 | 64,5% | 0,322 | 1,47 | 2.708.360 | 318,3 s |
+| ViT-B/16 pré-treinado | 47,08% | 1.130 | 80,5% | 0,455 | 0,93 | 85.804.808 | 267,4 s |
 | Chute ao acaso | 12,50% | 300 | 34,4% | | 2,63 | | |
 
 - **Acerto com tolerância de 1 período:** conta como acerto o período exato ou um vizinho.
@@ -180,7 +180,7 @@ O modelo está em `src/dlv/vit.py`, classe `VisionTransformer`. O caminho da ima
 - **Linha do chute ao acaso:** valores calculados por conta, sem execução.
     - Os 2 períodos das pontas têm 2 respostas aceitas e os outros 6 têm 3: (2 x 2 + 6 x 3) / 64 = 34,4%.
     - A distância média entre dois períodos sorteados é 168 / 64 = 2,63.
-- O modelo pré-treinado acerta 1.137 - 780 = 357 pinturas a mais que o ViT do zero: 14,9 pontos percentuais.
+- O modelo pré-treinado acerta 1.130 - 780 = 350 pinturas a mais que o ViT do zero: 14,6 pontos percentuais.
 - Os dois modelos do zero ficam cerca de 20 pontos acima do acaso. Eles aprendem algo, mas pouco.
 
 **Acurácia por período no teste (300 pinturas por período)**
@@ -188,13 +188,13 @@ O modelo está em `src/dlv/vit.py`, classe `VisionTransformer`. O caminho da ima
 | Período | ViT do zero | Sem posição | ViT-B/16 pré-treinado |
 | --- | --- | --- | --- |
 | até 1599 | 51,0% | 51,3% | 89,7% |
-| 1600 a 1799 | 45,7% | 45,0% | 47,7% |
-| 1800 a 1849 | 25,7% | 24,3% | 38,7% |
-| 1850 a 1874 | 24,7% | 24,0% | 42,3% |
-| 1875 a 1899 | 28,0% | 23,0% | 9,3% |
-| 1900 a 1924 | 17,3% | 17,7% | 33,7% |
-| 1925 a 1949 | 16,0% | 21,7% | 56,3% |
-| 1950 em diante | 51,7% | 52,7% | 61,3% |
+| 1600 a 1799 | 45,7% | 45,0% | 46,0% |
+| 1800 a 1849 | 25,7% | 24,3% | 41,3% |
+| 1850 a 1874 | 24,7% | 24,0% | 42,0% |
+| 1875 a 1899 | 28,0% | 23,0% | 9,7% |
+| 1900 a 1924 | 17,3% | 17,7% | 32,3% |
+| 1925 a 1949 | 16,0% | 21,7% | 55,0% |
+| 1950 em diante | 51,7% | 52,7% | 60,7% |
 
 - Os três modelos acertam mais nas pontas. São os períodos mais diferentes dos outros, e o primeiro é o mais largo.
 
@@ -206,7 +206,7 @@ O modelo está em `src/dlv/vit.py`, classe `VisionTransformer`. O caminho da ima
     - A perda de validação do ViT do zero tem o mínimo na época 20 (1,713) e sobe até 1,781. A de treino continua caindo.
     - Diferença final entre treino e validação no ViT do zero: 46,56% - 31,42% = 15,1 pontos.
 - **As curvas com e sem posição andam juntas** do início ao fim. A diferença entre elas é do tamanho da oscilação de uma época para outra. A diferença final na validação, 31,4% com posição e 30,3% sem, está dentro do ruído.
-- **O modelo pré-treinado também tem overfitting, e mais rápido.** Na época 2 o treino chega a 67,7% e a validação fica em 49,0%. A perda de validação sobe de 1,332 para 1,431.
+- **O modelo pré-treinado também tem overfitting, e mais rápido.** Na época 2 o treino chega a 68,0% e a validação fica em 48,5%. A perda de validação sobe de 1,332 para 1,433.
 - Os pesos avaliados no teste são os da última época, nos três modelos.
 
 ![Curvas de perda e acurácia por época dos três modelos](figures/a1_histories.png)
@@ -216,17 +216,17 @@ O modelo está em `src/dlv/vit.py`, classe `VisionTransformer`. O caminho da ima
 | Modelo | Período exato | Vizinho (1 período) | Longe (2 ou mais) |
 | --- | --- | --- | --- |
 | ViT do zero | 780 (32,5%) | 756 (31,5%) | 864 (36,0%) |
-| ViT-B/16 pré-treinado | 1.137 (47,4%) | 788 (32,8%) | 475 (19,8%) |
+| ViT-B/16 pré-treinado | 1.130 (47,1%) | 803 (33,5%) | 467 (19,5%) |
 
 - **ViT do zero:** os erros se espalham pela matriz. Mais de um terço das previsões cai a 2 períodos ou mais do real.
     - Há erros de séculos: 48 pinturas de 1900 a 1924 e 36 de 1925 a 1949 foram datadas como "até 1599".
     - O miolo é confuso: de 1800 a 1949, nenhum período passa de 84 acertos em 300.
 - **ViT-B/16 pré-treinado:** os erros ficam junto da diagonal.
-    - 1600 a 1799 perde 98 pinturas para 1800 a 1849.
-    - 1900 a 1924 perde 102 para 1925 a 1949, mais do que acerta (101).
-    - 1950 em diante perde 80 para 1925 a 1949.
+    - 1600 a 1799 perde 105 pinturas para 1800 a 1849.
+    - 1900 a 1924 perde 103 para 1925 a 1949, mais do que acerta (97).
+    - 1950 em diante perde 86 para 1925 a 1949.
     - "até 1599" é quase resolvido: 269 de 300.
-- **O buraco em 1875 a 1899.** Das 300 pinturas desse período, o modelo pré-treinado acerta 28 (9,3%, abaixo do acaso e pior que os 28,0% do ViT do zero), manda 94 para 1850 a 1874 e 96 para 1900 a 1924. No teste inteiro, ele só responde "1875 a 1899" 64 vezes em 2.400. O modelo quase não usa essa classe e divide as pinturas dela entre os dois vizinhos. Como os erros caem nos vizinhos, a métrica de 1 período de tolerância esconde esse defeito. A acurácia por período mostra.
+- **O buraco em 1875 a 1899.** Das 300 pinturas desse período, o modelo pré-treinado acerta 29 (9,7%, abaixo do acaso e pior que os 28,0% do ViT do zero), manda 91 para 1850 a 1874 e 90 para 1900 a 1924. No teste inteiro, ele só responde "1875 a 1899" 68 vezes em 2.400. O modelo quase não usa essa classe e divide as pinturas dela entre os dois vizinhos. Como os erros caem nos vizinhos, a métrica de 1 período de tolerância esconde esse defeito. A acurácia por período mostra.
 
 ![Matriz de confusão do ViT do zero no teste](figures/a1_confusion_scratch.png)
 
@@ -293,37 +293,37 @@ A pintura 3 é abstrata. Não há figura para a attention seguir.
 
 | Movimento | Pinturas | Acurácia, ViT do zero | Acurácia, pré-treinado | Distância média, pré-treinado |
 | --- | --- | --- | --- | --- |
-| Romanticism | 437 | 25,6% | 34,3% | 1,09 |
+| Romanticism | 437 | 25,6% | 35,5% | 1,05 |
 | Realism | 244 | 28,3% | 34,4% | 1,05 |
-| Northern Renaissance | 212 | 50,9% | 90,6% | 0,43 |
-| Impressionism | 200 | 27,5% | 25,0% | 1,20 |
-| Rococo | 152 | 43,4% | 49,3% | 0,57 |
-| Expressionism | 128 | 14,8% | 49,2% | 1,29 |
-| Surrealism | 121 | 19,0% | 54,5% | 1,19 |
-| Symbolism | 98 | 16,3% | 14,3% | 1,70 |
-| Post-Impressionism | 75 | 26,7% | 34,7% | 1,12 |
-| Naïve Art (Primitivism) | 65 | 29,2% | 52,3% | 1,06 |
+| Northern Renaissance | 212 | 50,9% | 90,6% | 0,38 |
+| Impressionism | 200 | 27,5% | 26,5% | 1,18 |
+| Rococo | 152 | 43,4% | 46,7% | 0,60 |
+| Expressionism | 128 | 14,8% | 45,3% | 1,38 |
+| Surrealism | 121 | 19,0% | 52,9% | 1,27 |
+| Symbolism | 98 | 16,3% | 14,3% | 1,71 |
+| Post-Impressionism | 75 | 26,7% | 33,3% | 1,13 |
+| Naïve Art (Primitivism) | 65 | 29,2% | 55,4% | 1,05 |
 | Abstract Expressionism | 61 | 63,9% | 75,4% | 0,31 |
-| Early Renaissance | 54 | 50,0% | 87,0% | 0,44 |
+| Early Renaissance | 54 | 50,0% | 87,0% | 0,39 |
 
 **Mais bem e mais mal datados pelo modelo pré-treinado**
 
-- Os mais bem datados já aparecem na tabela. Fora dela, por terem poucas pinturas, estão High Renaissance (90,5%, 19 de 21), Lyrical Abstraction (82,6%, 19 de 23) e Art Informel (81,0%, 17 de 21). O pior é Neoclassicism, com 9,7% (3 de 31). Romanticism e Realism, com 34,3% e 34,4%, somam 681 pinturas, 28% do teste.
+- Os mais bem datados já aparecem na tabela. Fora dela, por terem poucas pinturas, estão High Renaissance (90,5%, 19 de 21), Lyrical Abstraction (78,3%, 18 de 23) e Art Informel (81,0%, 17 de 21). O pior é Neoclassicism, com 12,9% (4 de 31). Romanticism e Realism, com 35,5% e 34,4%, somam 681 pinturas, 28% do teste.
 
 **Razão provável: quanto tempo o movimento durou em relação à largura dos períodos**
 
 - Os movimentos do Renascimento cabem inteiros no período "até 1599", que é o mais largo. Reconhecer o movimento já dá o período certo.
 - A abstração do pós-guerra cabe quase inteira em "1950 em diante", que não tem limite final.
 - Romanticism, Realism, Impressionism e Symbolism são do século XIX e do começo do XX, onde os períodos têm 50 ou 25 anos. Um movimento que dura várias décadas fica partido em 2 ou 3 classes. O modelo reconhece o movimento e ainda precisa adivinhar a fatia.
-- A distância média apoia essa leitura para o Impressionism: a acurácia é de 25,0%, mas o erro médio é de 1,20 período. O modelo erra por perto.
-- O Neoclassicism é um caso diferente: o erro médio é de 2,10 períodos, ou seja, erra para longe. Uma razão plausível é que o estilo imita de propósito a pintura de séculos anteriores. É o exemplo mais direto de que estilo e data são coisas diferentes. São só 31 pinturas, então a medida é fraca.
-- A hipótese não explica tudo: Baroque (42,0%) e Rococo (49,3%) cabem no período 1600 a 1799 e mesmo assim ficam abaixo de 50%. Os valores são do modelo pré-treinado.
+- A distância média apoia essa leitura para o Impressionism: a acurácia é de 26,5%, mas o erro médio é de 1,18 período. O modelo erra por perto.
+- O Neoclassicism é um caso diferente: o erro médio é de 2,03 períodos, ou seja, erra para longe. Uma razão plausível é que o estilo imita de propósito a pintura de séculos anteriores. É o exemplo mais direto de que estilo e data são coisas diferentes. São só 31 pinturas, então a medida é fraca.
+- A hipótese não explica tudo: Baroque (42,0%) e Rococo (46,7%) cabem no período 1600 a 1799 e mesmo assim ficam abaixo de 50%. Os valores são do modelo pré-treinado.
 - Esta explicação é uma hipótese. O notebook não guardou a distribuição de anos de cada movimento, então ela não foi conferida nos dados.
 
 **Onde o pré-treinamento ajudou mais e onde não ajudou**
 
 - Maiores ganhos, em pontos percentuais, entre os 21 movimentos: Northern Renaissance, High Renaissance (52,4% para 90,5%), Early Renaissance e Surrealism.
-- Sem ganho: Impressionism, Symbolism, Baroque (48,0% para 42,0%, com 50 pinturas) e Neoclassicism (9,7% nos dois).
+- Sem ganho: Impressionism, Symbolism, Baroque (48,0% para 42,0%, com 50 pinturas) e Neoclassicism (9,7% para 12,9%, uma pintura a mais em 31).
 - Uma leitura possível, não conferida nos dados: Impressionism e Symbolism têm muitas pinturas do fim do século XIX, onde fica o buraco descrito em Resultados.
 
 ![Acurácia por movimento, ViT do zero](figures/a1_styles_scratch.png)
@@ -336,27 +336,27 @@ A pintura 3 é abstrata. Não há figura para a attention seguir.
 
 | | ViT do zero | ViT-B/16 pré-treinado |
 | --- | --- | --- |
-| Acurácia no teste | 32,5% (780 de 2.400) | 47,4% (1.137 de 2.400) |
-| Acerto com tolerância de 1 período | 64,0% | 80,2% |
-| F1 macro | 0,320 | 0,458 |
+| Acurácia no teste | 32,5% (780 de 2.400) | 47,1% (1.130 de 2.400) |
+| Acerto com tolerância de 1 período | 64,0% | 80,5% |
+| F1 macro | 0,320 | 0,455 |
 | Distância média | 1,49 período | 0,93 período |
-| Erros a 2 períodos ou mais | 864 | 475 |
+| Erros a 2 períodos ou mais | 864 | 467 |
 | Parâmetros | 2.720.840 | 85.804.808 |
 | Entrada | 64x64 | 224x224 |
 | Épocas | 40 | 2 |
-| Tempo de treino na T4 | 277,4 s | 236,0 s |
-| Tempo de avaliação do teste | 0,6 s | 7,7 s |
+| Tempo de treino na T4 | 304,6 s | 267,4 s |
+| Tempo de avaliação do teste | 0,6 s | 8,7 s |
 | Dados vistos antes | nenhum | ImageNet-1k |
 
 **Escolha para este domínio: o ViT pré-treinado**
 
-- Acerta 14,9 pontos percentuais a mais no teste. O erro padrão de cada acurácia é de cerca de 1 ponto, então a diferença está muito acima do ruído.
+- Acerta 14,6 pontos percentuais a mais no teste. O erro padrão de cada acurácia é de cerca de 1 ponto, então a diferença está muito acima do ruído.
 - Custou menos tempo de treino, mesmo com 31,5 vezes mais parâmetros (85.804.808 / 2.720.840). O ViT do zero não tem dados suficientes: com 11.200 pinturas, tem o overfitting descrito em Resultados.
 
 **O que pesa contra**
 
-- O modelo é grande: avaliar o teste leva 7,7 s contra 0,6 s, e o pico de memória da GPU, de 3.971,6 MB, provavelmente vem dele.
-- Ele tem um defeito que o ViT do zero não tem: quase ignora o período 1875 a 1899 (9,3% contra 28,0%).
+- O modelo é grande: avaliar o teste leva 8,7 s contra 0,6 s, e o pico de memória da GPU, de 3.971,6 MB, provavelmente vem dele.
+- Ele tem um defeito que o ViT do zero não tem: quase ignora o período 1875 a 1899 (9,7% contra 28,0%).
 - Os dois modelos diferem em três coisas ao mesmo tempo: pré-treinamento, tamanho e resolução de entrada (224x224 contra 64x64). O experimento não separa quanto do ganho vem de cada uma.
 
 **Para que o resultado serve**
@@ -445,7 +445,7 @@ A pintura 3 é abstrata. Não há figura para a attention seguir.
 
 **Neste domínio**
 
-- Na Atividade 3, uma ResNet-50 pré-treinada, com o backbone congelado, chegou a 100% em um teste de 265 fotos de 7 classes de objetos, um domínio próximo da ImageNet. Aqui o ViT-B/16 pré-treinado ficou em 47,4%. A datação de pinturas é distante, e boa parte da dificuldade vem do domínio e da tarefa.
+- Na Atividade 3, uma ResNet-50 pré-treinada, com o backbone congelado, chegou a 100% em um teste de 265 fotos de 7 classes de objetos, um domínio próximo da ImageNet. Aqui o ViT-B/16 pré-treinado ficou em 47,1%. A datação de pinturas é distante, e boa parte da dificuldade vem do domínio e da tarefa.
 - As pistas de data são de dois tipos:
     - locais: pincelada, craquelado, textura da tinta. Favorecem a CNN;
     - globais: composição, paleta, uso do espaço. Favorecem o ViT.
@@ -459,10 +459,10 @@ A pintura 3 é abstrata. Não há figura para a attention seguir.
 
 **Limites do experimento**
 
-- **Uma seed por modelo.** A variação entre execuções não foi medida. A diferença de 14,9 pontos entre o modelo pré-treinado e o do zero é grande o bastante para não depender disso. A comparação com e sem posição (1 pintura de diferença) depende.
+- **Uma seed por modelo.** A variação entre execuções não foi medida. A diferença de 14,6 pontos entre o modelo pré-treinado e o do zero é grande o bastante para não depender disso. A comparação com e sem posição (1 pintura de diferença) depende.
 - **Uma amostra.** São 16.000 pinturas sorteadas uma vez, de 76.881 com ano. Outra amostra daria outros pintores no teste.
 - **Grupos pequenos.** Alguns grupos de movimento têm pouco mais de 20 pinturas no teste.
-- **Fine-tuning curto e simples.** Duas épocas, sem augmentation, taxa de aprendizado constante. Um treino mais cuidadoso provavelmente passaria de 47,4%, mas isso não foi medido.
+- **Fine-tuning curto e simples.** Duas épocas, sem augmentation, taxa de aprendizado constante. Um treino mais cuidadoso provavelmente passaria de 47,1%, mas isso não foi medido.
 - **Rótulos.** Os anos não foram conferidos, e estilo e data podem divergir, como descrito em Problema.
 - **Períodos de larguras diferentes.** Errar por 1 período depois de 1850 é errar cerca de 25 anos. Entre "até 1599" e "1600 a 1799" pode ser errar séculos. A distância em períodos não é uma distância em anos.
 

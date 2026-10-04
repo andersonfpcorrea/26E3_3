@@ -26,11 +26,11 @@ A reprodução do projeto serve de evidência. Os números dela, todos da mesma 
 | Medida | Valor |
 | --- | --- |
 | Acurácia de treino na última época | 100% |
-| Acurácia de validação na última época | 89,6% (215 de 240) |
+| Acurácia de validação na última época | 89,2% (214 de 240) |
 | Acurácia de quem sempre responde Normal, na mesma validação | 72,5% (174 de 240) |
 | Recall de COVID-19 na validação do projeto | 0,41 (9 de 22) |
-| Recall de COVID-19 no teste real | 0,37 (112 de 300) |
-| Recall de Normal e de Pneumonia no teste real | 0,96 e 0,96 |
+| Recall de COVID-19 no teste real | 0,44 (133 de 300) |
+| Recall de Normal e de Pneumonia no teste real | 0,97 e 0,94 |
 
 ![Projeto reproduzido: perda e acurácia por época](figures/a4_original_history.png)
 
@@ -40,7 +40,7 @@ A reprodução do projeto serve de evidência. Os números dela, todos da mesma 
 
 - Normal tem 70% das imagens e COVID-19 tem 10%. São 7 imagens de Normal para cada imagem de COVID-19.
 - A perda dá o mesmo peso a cada imagem. Errar todas as imagens de COVID-19 custa pouco na média, então o modelo aprende a preferir Normal.
-- No teste real da reprodução, 168 das 300 imagens de COVID-19 foram classificadas como Normal.
+- No teste real da reprodução, 154 das 300 imagens de COVID-19 foram classificadas como Normal.
 
 **Impacto clínico**
 
@@ -63,7 +63,7 @@ A reprodução do projeto serve de evidência. Os números dela, todos da mesma 
 **O que está errado**
 
 - A acurácia mistura as três classes e é dominada pela maior.
-- Na reprodução, a acurácia de validação foi 89,6% e parece aceitável. Responder sempre Normal já daria 72,5%.
+- Na reprodução, a acurácia de validação foi 89,2% e parece aceitável. Responder sempre Normal já daria 72,5%.
 - Na mesma validação, a recall de COVID-19 foi 0,41. O modelo perdeu mais da metade dos casos da classe que motivou o projeto.
 
 **Impacto clínico**
@@ -87,7 +87,7 @@ A reprodução do projeto serve de evidência. Os números dela, todos da mesma 
 **O que está errado**
 
 - O time reportou 93% no treino e 61% na validação: 32 pontos de diferença. O número já dizia que o modelo não generalizava.
-- A reprodução mostra o mesmo padrão em escala menor. A perda de validação teve o mínimo na época 6 (0,295) e subiu até 0,325 na época 15, enquanto a de treino caiu para 0,010.
+- A reprodução mostra o mesmo padrão em escala menor. A perda de validação teve o mínimo na época 6 (0,304) e subiu até 0,352 na época 15, enquanto a de treino caiu para 0,009.
 - SGD sem momentum, com taxa de aprendizado fixa de 0,01 e número fixo de épocas. Sem scheduler, sem weight decay, sem early stopping e sem escolha de checkpoint pela validação. O modelo entregue foi o da última época.
 
 **Impacto clínico**
@@ -110,7 +110,7 @@ A reprodução do projeto serve de evidência. Os números dela, todos da mesma 
 **O que está errado**
 
 - O mesmo conjunto de validação serviu para acompanhar o treino e para reportar o resultado. Não havia teste separado.
-- Na reprodução, a acurácia no teste real, que tem 300 imagens por classe, foi 76,4%, abaixo da de validação. A recall de COVID-19 foi parecida nos dois. A acurácia caiu porque o teste tem a mesma quantidade de cada classe e a validação é dominada por Normal.
+- Na reprodução, a acurácia no teste real, que tem 300 imagens por classe, foi 78,6%, abaixo da de validação. A recall de COVID-19 foi parecida nos dois. A acurácia caiu porque o teste tem a mesma quantidade de cada classe e a validação é dominada por Normal.
 
 **Impacto clínico**
 
@@ -174,8 +174,8 @@ A reprodução do projeto serve de evidência. Os números dela, todos da mesma 
 2. Passo do generator: sorteia ruído novo, gera imagens e passa pelo discriminator já atualizado, com os pesos dele congelados. A perda é a BCE com alvo 1, a forma non-saturating: o generator ganha quando o discriminator chama as geradas de reais.
 3. Cada rede tem o seu otimizador Adam, com taxa de aprendizado 0,0002 e betas (0,5, 0,999). Um passo de cada rede por batch.
 
-- Treino: 286 épocas, batch de 64, 15 batches por época, 0,66 segundo por época na T4.
-- O número de épocas veio do limite de tempo do notebook, que rodou em 23,2 minutos com pico de 656,5 MB de GPU.
+- Treino: 286 épocas, batch de 64, 15 batches por época, 0,67 segundo por época na T4.
+- O número de épocas veio do limite de tempo do notebook, que rodou em 23,0 minutos com pico de 656,5 MB de GPU.
 
 ## Instabilidade do treinamento e mitigação
 
@@ -192,11 +192,11 @@ A versão 1 é o baseline: a rede e o loop descritos acima, com os batches sorte
 
 ![Diversidade por época nas duas versões. Linha grossa: média das três seeds. Linhas finas: cada seed](figures/a4_gan_diversity.png)
 
-- **Mode collapse no começo, em todas as seeds.** A diversidade fica perto de 0,01 até cerca da época 50. Na grade de imagens, as oito imagens de cada classe são iguais nas épocas 9 e 28.
-- **Saída do colapso desigual entre classes.** Normal sobe perto da época 50 e chega ao nível das imagens reais. Pneumonia sobe mais devagar. COVID-19 sobe por último e para longe da linha das reais.
-- **Sem divergência.** Nenhuma perda não finita. Na seed 42, a perda do discriminator termina em 0,44 e a do generator em 3,08. No gráfico, o escore médio fica perto de 0,83 para imagens reais e 0,17 para geradas no fim do treino.
-- **A classe minoritária é a menos diversa.** A razão média de COVID-19 foi 0,577, contra 0,999 em Normal e 0,822 em Pneumonia.
-- **Colapso parcial em uma seed.** Na seed 42 a razão de COVID-19 foi 0,498, logo abaixo do limite. A curva dessa seed cai depois da época 260: a diversidade vai de cerca de 0,15 para cerca de 0,07.
+- **Mode collapse no começo, em todas as seeds.** A diversidade fica entre 0,01 e 0,02 até cerca da época 50 e só passa de 0,05 entre as épocas 53 e 101, conforme a seed e a classe. Na grade de imagens, as oito imagens de cada classe são iguais nas épocas 9 e 28.
+- **Saída do colapso desigual entre classes.** Normal sobe perto da época 50 e chega ao nível das imagens reais. Pneumonia e COVID-19 sobem depois e param abaixo da linha das reais, COVID-19 mais longe.
+- **Sem divergência.** Nenhuma perda não finita. Na seed 42, a perda do discriminator termina em 0,47 e a do generator em 3,10. No gráfico, o escore médio fica perto de 0,82 para imagens reais e 0,18 para geradas no fim do treino.
+- **A classe minoritária é a menos diversa.** A razão média de COVID-19 foi 0,439, contra 0,956 em Normal e 0,890 em Pneumonia.
+- **Colapso de COVID-19 em duas de três seeds.** As razões foram 0,412 (seed 42), 0,602 (seed 43) e 0,303 (seed 44), com o limite em 0,5. Na seed 42 a curva chega a cerca de 0,17 perto da época 155 e termina perto de 0,09.
 
 ![Versão 1, seed 42: imagens geradas com o mesmo ruído em seis épocas](figures/a4_gan_snapshots_v1.png)
 
@@ -229,25 +229,26 @@ Três foram testadas em execuções anteriores do notebook e saíram dele. Os n�
 
 | Classe | Versão 1 | Seeds colapsadas | Versão 2 | Seeds colapsadas |
 | --- | --- | --- | --- | --- |
-| Normal | 0,999 ± 0,009 | 0 de 3 | 0,538 ± 0,155 | 2 de 3 |
-| Pneumonia | 0,822 ± 0,072 | 0 de 3 | 0,544 ± 0,159 | 1 de 3 |
-| COVID-19 | 0,577 ± 0,106 | 1 de 3 | 0,660 ± 0,021 | 0 de 3 |
+| Normal | 0,956 ± 0,032 | 0 de 3 | 0,522 ± 0,086 | 1 de 3 |
+| Pneumonia | 0,890 ± 0,092 | 0 de 3 | 0,588 ± 0,094 | 1 de 3 |
+| COVID-19 | 0,439 ± 0,151 | 2 de 3 | 0,700 ± 0,043 | 0 de 3 |
 
-- COVID-19 por seed: versão 1 com 0,498, 0,535 e 0,698. Versão 2 com 0,672, 0,672 e 0,636.
+- COVID-19 por seed: versão 1 com 0,412, 0,602 e 0,303. Versão 2 com 0,698, 0,744 e 0,658.
 
 **O que melhorou**
 
-- A estabilidade da classe minoritária entre seeds. O desvio padrão de COVID-19 caiu de 0,106 para 0,021, cerca de cinco vezes menor.
-- Nenhuma seed da versão 2 ficou colapsada em COVID-19. Na versão 1, a seed contada como colapsada está no limite: 0,498, contra 0,5.
+- A diversidade média de COVID-19 subiu 0,261, de 0,439 para 0,700. As três seeds da versão 2 (0,658 a 0,744) ficaram acima das três da versão 1 (0,303 a 0,602).
+- A estabilidade da classe minoritária entre seeds. O desvio padrão de COVID-19 caiu de 0,151 para 0,043, cerca de 3,5 vezes menor.
+- Nenhuma seed da versão 2 ficou colapsada em COVID-19. Na versão 1, duas de três ficaram (0,412 e 0,303).
 
 **O que não foi mostrado**
 
-- Um aumento da diversidade média. A média subiu 0,083, de 0,577 para 0,660. Essa diferença é menor que o desvio padrão da versão 1 (0,106). Com três seeds, ela está dentro da variação do baseline.
+- Que a melhora venha só do balanceamento. A versão 1 desta execução ficou em 0,439, abaixo das três execuções anteriores do baseline (0,66, 0,56 e 0,65, com uma seed cada). Parte da distância para a versão 2 pode vir da variação entre execuções da GAN.
 
 **O que custou**
 
 - Normal e Pneumonia perderam diversidade, como mostra a tabela. Cada imagem dessas classes passou a aparecer em menos atualizações.
-- No gráfico, a versão 2 fica mais tempo em colapso. Normal só sobe depois da época 100, e uma seed fica colapsada nas três classes até perto da época 180.
+- No gráfico, a versão 2 sai do colapso mais tarde: entre as épocas 84 e 119, contra 53 a 101 na versão 1. Na seed 43, as três classes ficam colapsadas até perto da época 118.
 - Nenhuma das duas versões diverge. As curvas de perda da seed 42 são parecidas.
 
 ![Versão 2, seed 42: imagens geradas com o mesmo ruído em seis épocas](figures/a4_gan_snapshots_v2.png)
@@ -263,19 +264,19 @@ Três foram testadas em execuções anteriores do notebook e saíram dele. Os n�
 
 | Distância até a imagem de treino mais próxima | Imagens | Média | Mediana | Mínimo |
 | --- | --- | --- | --- | --- |
-| Geradas pela versão 2 (três seeds) | 1.728 | 0,120 | 0,116 | 0,082 |
+| Geradas pela versão 2 (três seeds) | 1.728 | 0,119 | 0,119 | 0,077 |
 | Reais de validação | 24 | 0,105 | 0,099 | 0,072 |
 
 - Nenhuma imagem gerada ficou mais perto do treino que a imagem real de validação mais próxima. A parcela foi 0. Não há sinal de cópia.
 - As geradas ficam um pouco mais longe do treino que as reais de validação. Parte dessa distância é ruído.
-- Segundo controle: balancear poderia aumentar a diversidade só por gerar ruído. A distância média por seed foi 0,143, 0,132 e 0,107 na versão 1 e 0,113, 0,108 e 0,138 na versão 2. A versão 2 não está mais longe das imagens reais que a versão 1.
+- Segundo controle: balancear poderia aumentar a diversidade só por gerar ruído. A distância média por seed foi 0,112, 0,128 e 0,107 na versão 1 e 0,125, 0,098 e 0,134 na versão 2. A versão 2 não está mais longe das imagens reais que a versão 1.
 
 ![Primeira linha: COVID-19 reais do treino. Demais linhas: imagens geradas por cada versão e seed](figures/a4_real_vs_synthetic.png){: width="499"}
 
 **O que se vê nas imagens**
 
 - As reais são nítidas e variam bastante em contraste, enquadramento e posição do paciente.
-- As geradas mostram o contorno do tórax e dos pulmões, mas são granuladas, sem costelas nem detalhes finos. Dentro de uma mesma seed, as oito são parecidas entre si: o mesmo tórax com pequenas mudanças de brilho, nas duas versões.
+- As geradas mostram o contorno do tórax e dos pulmões, mas são granuladas, sem costelas nem detalhes finos. Dentro de uma mesma seed, as oito são parecidas entre si na versão 1: o mesmo tórax com pequenas mudanças de brilho. Na versão 2 há mais variação, sobretudo na seed 43.
 - Limite da medida: distância de pixels em 64x64 detecta cópia exata ou quase exata. Ela não mede se a imagem gerada mostra os sinais que um radiologista procura.
 
 ## Efeito das imagens sintéticas na recall
@@ -296,42 +297,42 @@ Três foram testadas em execuções anteriores do notebook e saíram dele. Os n�
 
 | Braço | Normal | Pneumonia | COVID-19 | COVID-19 por seed |
 | --- | --- | --- | --- | --- |
-| 1. Só reais | 0,996 ± 0,004 | 0,843 ± 0,073 | 0,583 ± 0,160 | 0,763 / 0,457 / 0,530 |
-| 2. Reais e sintéticas | 0,997 ± 0,003 | 0,899 ± 0,063 | 0,663 ± 0,044 | 0,657 / 0,710 / 0,623 |
-| 3. Reais com pesos de classe | 0,991 ± 0,005 | 0,928 ± 0,020 | 0,736 ± 0,102 | 0,773 / 0,620 / 0,813 |
+| 1. Só reais | 0,994 ± 0,005 | 0,873 ± 0,046 | 0,586 ± 0,138 | 0,713 / 0,440 / 0,603 |
+| 2. Reais e sintéticas | 0,992 ± 0,004 | 0,916 ± 0,033 | 0,571 ± 0,095 | 0,640 / 0,610 / 0,463 |
+| 3. Reais com pesos de classe | 0,977 ± 0,015 | 0,948 ± 0,027 | 0,787 ± 0,074 | 0,810 / 0,703 / 0,847 |
 
-**Nenhuma diferença entre os braços é maior que a variação entre seeds.**
+**O braço com pesos de classe fica acima dos outros dois por mais que o desvio padrão de cada um. Os braços 1 e 2 não se distinguem.**
 
 ![Recall por classe nos três braços, com o desvio padrão entre seeds](figures/a4_recall_arms.png)
 
-- Braço 2 menos braço 1: 0,080. O desvio padrão do braço 1 é 0,160.
-- Braço 3 menos braço 1: 0,153, ainda abaixo de 0,160.
-- Braço 3 menos braço 2: 0,073. O desvio padrão do braço 3 é 0,102.
-- Uma única seed do braço 1 (0,763) ficou acima da média dos outros dois braços.
-- O braço 2 teve o menor desvio padrão (0,044).
+- Braço 2 menos braço 1: -0,014. O desvio padrão do braço 1 é 0,138.
+- Braço 3 menos braço 1: 0,201, acima de 0,138.
+- Braço 3 menos braço 2: 0,216. Os desvios padrão dos braços 2 e 3 são 0,095 e 0,074.
+- Com três seeds a separação não é total: a pior seed do braço 3 (0,703) ficou abaixo da melhor seed do braço 1 (0,713).
+- O braço 3 teve o menor desvio padrão (0,074).
 
 **Confusão que não foi controlada**
 
 - O braço 2 treina com 1.536 imagens contra 960 nos outros dois. Nas mesmas 10 épocas, são 1,6 vez mais atualizações de pesos.
-- Uma diferença a favor do braço 2, na média ou no desvio padrão, poderia vir do treino mais longo. O experimento não separa as duas coisas.
+- Qualquer diferença do braço 2, a favor ou contra, poderia vir do treino mais longo. O experimento não separa as duas coisas.
 
 **Para onde vão os casos perdidos (900 imagens de COVID-19: 300 por seed)**
 
 | Braço | Acertos | Classificadas como Normal | Classificadas como Pneumonia |
 | --- | --- | --- | --- |
-| 1. Só reais | 525 | 355 | 20 |
-| 2. Reais e sintéticas | 597 | 290 | 13 |
-| 3. Reais com pesos de classe | 662 | 224 | 14 |
+| 1. Só reais | 527 | 356 | 17 |
+| 2. Reais e sintéticas | 514 | 376 | 10 |
+| 3. Reais com pesos de classe | 708 | 176 | 16 |
 
 - Quase todo caso perdido de COVID-19 vira Normal, nos três braços.
-- A precision de COVID-19 fica em 0,99 nos três braços. Quando o modelo diz COVID-19, quase sempre acerta. Ele diz pouco.
-- A precision de Normal é 0,649, 0,704 e 0,757 no teste balanceado. Um resultado Normal desses modelos não é confiável como resultado negativo.
-- Mesmo o melhor braço perde em média 26% dos casos de COVID-19 do teste.
+- A precision de COVID-19 fica entre 0,98 e 0,99 nos três braços. Quando o modelo diz COVID-19, quase sempre acerta. Ele diz pouco.
+- A precision de Normal é 0,661, 0,667 e 0,802 no teste balanceado. Um resultado Normal desses modelos não é confiável como resultado negativo.
+- Mesmo o melhor braço perde em média 21% dos casos de COVID-19 do teste.
 
 **Conclusão para o plano**
 
 - Pesos de classe custam uma linha de código e nenhum treino extra. São a primeira coisa a tentar, junto com um protocolo correto.
-- Este estudo não mostrou que a augmentation sintética aumenta a recall.
+- Este estudo não mostrou que a augmentation sintética aumenta a recall: a do braço 2 (0,571) ficou igual à do braço 1 (0,586), dentro da variação entre seeds. O braço com pesos de classe teve a maior recall de COVID-19 (0,787).
 
 ## Plano de melhoria integrado
 
@@ -374,7 +375,7 @@ Os valores abaixo são propostas, a discutir e fechar com o time clínico.
 - **Este estudo não tem validade clínica.** É um exercício de método com imagens públicas.
 - **Resolução.** 64x64 pixels é muito menos do que um radiologista usa. A escolha veio do tempo de treino da GAN na T4.
 - **Uma base montada de várias fontes.** As classes da base vêm de coleções diferentes. Um classificador pode aprender a reconhecer a origem da imagem e usar isso como atalho. Esse efeito não foi medido, e o teste vem da mesma base.
-- **Três seeds.** Bastam para mostrar que a variação é grande. Não bastam para ordenar os braços nem as versões da GAN.
+- **Três seeds.** Bastam para mostrar que a variação é grande. Não bastam para ordenar os braços 1 e 2, nem para medir com precisão a vantagem do braço 3 e a das versões da GAN.
 - **Um sorteio do conjunto do projeto.** Outro sorteio daria outras 96 imagens de COVID-19 no treino.
 - **Teste balanceado.** O teste tem 300 imagens por classe. A acurácia e a precision medidas nele não valem para a proporção de casos de um hospital. A recall por classe não depende dessa proporção.
 - **Rótulos.** São os da base, sem revisão por radiologista.

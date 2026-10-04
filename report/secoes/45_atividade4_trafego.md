@@ -45,7 +45,7 @@
 ### 6. Acurácia global e nenhum monitoramento depois da implantação
 
 - **Problema.** A decisão de implantar se apoiou em um número só. O projeto não informa a proporção das classes nem a recall de "congestionado". Se, em produção, as falhas foram percebidas só por quem usava o sistema, faltou medição contínua.
-- **Impacto operacional.** Se "livre" for a classe mais comum, um modelo pode chegar perto de 78% e ainda perder boa parte dos congestionamentos. Na Atividade 4.1, uma acurácia de validação de 89,6% convivia com recall de 0,41 na classe que importava. Sem monitoramento, a degradação por câmera reposicionada, lente suja ou obra na via só aparece como reclamação.
+- **Impacto operacional.** Se "livre" for a classe mais comum, um modelo pode chegar perto de 78% e ainda perder boa parte dos congestionamentos. Na Atividade 4.1, uma acurácia de validação de 89,2% convivia com recall de 0,41 na classe que importava. Sem monitoramento, a degradação por câmera reposicionada, lente suja ou obra na via só aparece como reclamação.
 - **Como abordar.** Reportar recall e precision por classe, por câmera e por condição. Depois da implantação, auditar uma amostra rotulada por semana, acompanhar a distribuição das previsões e da confiança por câmera e definir um alerta para quando elas mudarem.
 
 ## Riscos de partir da ImageNet para classificar fluxo

@@ -50,7 +50,7 @@
 ### Por que ResNet-50
 
 - Cabe com folga na T4. O pico de memória alocada pelo PyTorch na GPU foi de 465,8 MB, cerca de 3% dos 15,6 GB da placa.
-- É rápida o bastante para o Colab. O notebook inteiro rodou em 108,2 segundos, contando download, 10 épocas e avaliação.
+- É rápida o bastante para o Colab. O notebook inteiro rodou em 115,3 segundos, contando download, 10 épocas e avaliação.
 - A saída do backbone tem 2.048 features por imagem. Para separar 7 classes, a camada nova precisa de 2.048 x 7 pesos mais 7 vieses: 14.343 parâmetros.
 - A ImageNet já contém fotos muito parecidas com as deste dataset: várias raças de cães e de gatos, tipos de carro, bicicletas, cavalos e flores. Pessoas aparecem em muitas fotos da ImageNet, embora ela não tenha uma classe "pessoa".
 - Com 7 classes de objetos do dia a dia, um modelo maior não teria erro de teste para corrigir. A validação errou 2 imagens em 265.

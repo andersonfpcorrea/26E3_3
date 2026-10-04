@@ -45,7 +45,7 @@
 
 **Neste projeto**
 
-- Cada uma das 1.501 imagens passou uma vez pelo encoder de imagem e virou um vetor de comprimento 1. Isso levou 37,0 segundos.
+- Cada uma das 1.501 imagens passou uma vez pelo encoder de imagem e virou um vetor de comprimento 1. Isso levou 37,5 segundos.
 - Os mesmos embeddings servem ao ranking e à busca. Muda só o texto comparado: 26 prompts de conceito no ranking, 11 frases na busca.
 
 ## Ranking de conceitos
