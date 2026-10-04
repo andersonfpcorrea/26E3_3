@@ -12,7 +12,7 @@
 
 ## Problemas técnicos e metodológicos
 
-### 1. A validação usa as mesmas câmeras do treino
+### 1. A validação pode usar as mesmas câmeras do treino
 
 - **Problema.** Provavelmente os frames de validação vêm das 12 câmeras do treino. Cada câmera tem fundo fixo: os mesmos prédios, faixas e postes. O modelo pode reconhecer a câmera e o seu padrão habitual. Nesse caso, os 78% medem frames novos de câmeras conhecidas e não informam nada sobre uma câmera nova.
 - **Impacto operacional.** O sistema foi instalado em câmeras com outros ângulos. Se a validação usou as câmeras do treino, a acurácia nas câmeras novas nunca foi medida.
