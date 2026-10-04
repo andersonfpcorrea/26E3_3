@@ -2,6 +2,7 @@
 
 from contextlib import contextmanager
 from math import isfinite
+from statistics import mean, stdev
 
 import torch
 from torch import Tensor, nn
@@ -450,6 +451,59 @@ def train_gan(
     return history
 
 
+def train_gan_version(
+    settings: dict,
+    images: Tensor,
+    labels: Tensor,
+    seed: int,
+    epochs: int,
+    batch_size: int,
+    base_channels: int,
+    device,
+    snapshot_epochs=(),
+    latent_dim: int = 100,
+    num_classes: int = 3,
+) -> tuple[ConditionalGenerator, dict]:
+    """Builds and trains one GAN version for one seed, and returns its generator and history.
+
+    ``settings`` names the version: ``spectral_norm``, ``batch_norm``, ``loss``,
+    ``gradient_penalty_weight``, ``augment``, ``betas``, ``generator_lr`` and
+    ``discriminator_lr``. The global torch seed is set to ``seed`` right before
+    each network is built, so the initial weights follow the seed, and the same
+    seed goes to ``train_gan`` for shuffling and noise. This moves the global
+    random state.
+    """
+    torch.manual_seed(seed)
+    generator = ConditionalGenerator(
+        latent_dim=latent_dim, num_classes=num_classes, base_channels=base_channels
+    )
+    torch.manual_seed(seed)
+    discriminator = ConditionalDiscriminator(
+        num_classes=num_classes,
+        base_channels=base_channels,
+        spectral_norm=settings["spectral_norm"],
+        batch_norm=settings["batch_norm"],
+    )
+    history = train_gan(
+        generator,
+        discriminator,
+        images,
+        labels,
+        epochs=epochs,
+        batch_size=batch_size,
+        device=device,
+        loss=settings["loss"],
+        gradient_penalty_weight=settings["gradient_penalty_weight"],
+        betas=settings["betas"],
+        augment=settings["augment"],
+        generator_lr=settings["generator_lr"],
+        discriminator_lr=settings["discriminator_lr"],
+        seed=seed,
+        snapshot_epochs=snapshot_epochs,
+    )
+    return generator, history
+
+
 def generate(generator: ConditionalGenerator, labels: Tensor, device, seed: int) -> Tensor:
     """Generates one uint8 (n, 1, 64, 64) image per label, deterministically for a given seed.
 
@@ -496,3 +550,44 @@ def diagnose_gan(history: dict, real_diversity: dict[int, float]) -> dict:
         "discriminator_wins": discriminator_final < DISCRIMINATOR_WIN_LOSS,
         "non_finite_loss": any(not isfinite(value) for value in losses),
     }
+
+
+def summarise_diagnoses(diagnoses: list[dict]) -> dict:
+    """Summarises the diagnoses of one GAN version trained with several seeds.
+
+    For every class it gives the diversity ratio of each seed, its mean and its
+    sample standard deviation (zero for a single seed), and the number of seeds
+    in which the class was flagged as collapsed. It also counts the seeds with a
+    non-finite loss and the seeds in which the discriminator was winning. An
+    empty list gives an empty summary.
+    """
+    labels = list(diagnoses[0]["diversity_ratio"]) if diagnoses else []
+    ratios = {label: [found["diversity_ratio"][label] for found in diagnoses] for label in labels}
+    non_finite = sum(1 for found in diagnoses if found["non_finite_loss"])
+    return {
+        "seeds": len(diagnoses),
+        "diversity_ratio": ratios,
+        "diversity_ratio_mean": {label: mean(values) for label, values in ratios.items()},
+        "diversity_ratio_std": {
+            label: stdev(values) if len(values) > 1 else 0.0 for label, values in ratios.items()
+        },
+        "collapsed_seeds": {
+            label: sum(1 for found in diagnoses if label in found["collapsed_classes"]) for label in labels
+        },
+        "non_finite_seeds": non_finite,
+        "any_non_finite_loss": non_finite > 0,
+        "discriminator_wins_seeds": sum(1 for found in diagnoses if found["discriminator_wins"]),
+    }
+
+
+def choose_by_mean_ratio(summaries: dict[str, dict], label: int) -> dict:
+    """Picks the version with the highest mean diversity ratio for one class.
+
+    ``summaries`` maps a version to the output of ``summarise_diagnoses``. The
+    result holds the chosen version, the class and every version's mean ratio.
+    The first listed version wins a tie. Raises ValueError when there is no version.
+    """
+    if not summaries:
+        raise ValueError("at least one version is needed to choose from")
+    means = {version: found["diversity_ratio_mean"][label] for version, found in summaries.items()}
+    return {"label": label, "means": means, "chosen": max(means, key=means.get)}

@@ -10,6 +10,7 @@ from torch import nn
 from dlv.gan import (
     ConditionalDiscriminator,
     ConditionalGenerator,
+    choose_by_mean_ratio,
     diagnose_gan,
     differentiable_augment,
     discriminator_loss,
@@ -18,7 +19,9 @@ from dlv.gan import (
     gradient_penalty,
     nearest_real_distance,
     pairwise_diversity,
+    summarise_diagnoses,
     train_gan,
+    train_gan_version,
 )
 
 DEVICE = torch.device("cpu")
@@ -534,3 +537,128 @@ def test_train_gan_with_augmentation_trains_and_stays_reproducible():
     assert all(isfinite(value) for value in history["discriminator_loss"])
     plain_generator, _, _ = run_training(seed=4)
     assert not torch.equal(parameters_of(first_generator), parameters_of(plain_generator))
+
+
+def diagnosis_with(ratios, collapsed=(), non_finite=False, wins=False):
+    """Builds a diagnosis with the given per-class diversity ratios and flags."""
+    return {
+        "diversity_ratio": dict(enumerate(ratios)),
+        "collapsed_classes": list(collapsed),
+        "non_finite_loss": non_finite,
+        "discriminator_wins": wins,
+    }
+
+
+def test_summarise_diagnoses_gives_mean_and_sample_standard_deviation_per_class():
+    """Each class gets the mean and the n-1 standard deviation of its ratio over the seeds."""
+    found = summarise_diagnoses(
+        [diagnosis_with((0.9, 0.2)), diagnosis_with((0.7, 0.4)), diagnosis_with((0.8, 0.3))]
+    )
+    assert found["seeds"] == 3
+    assert found["diversity_ratio_mean"][0] == pytest.approx(0.8)
+    assert found["diversity_ratio_std"][0] == pytest.approx(0.1)
+    assert found["diversity_ratio_mean"][1] == pytest.approx(0.3)
+    assert found["diversity_ratio"][1] == pytest.approx([0.2, 0.4, 0.3])
+
+
+def test_summarise_diagnoses_counts_collapsed_seeds_and_non_finite_losses_per_class():
+    """The collapse count is per class, and one non-finite seed raises the overall flag."""
+    found = summarise_diagnoses(
+        [
+            diagnosis_with((0.9, 0.2), collapsed=[1]),
+            diagnosis_with((0.4, 0.3), collapsed=[0, 1], non_finite=True),
+            diagnosis_with((0.8, 0.9), wins=True),
+        ]
+    )
+    assert found["collapsed_seeds"] == {0: 1, 1: 2}
+    assert found["non_finite_seeds"] == 1
+    assert found["any_non_finite_loss"] is True
+    assert found["discriminator_wins_seeds"] == 1
+
+
+def test_summarise_diagnoses_handles_one_seed_and_no_seeds():
+    """A single seed has a zero spread and an empty list gives an empty summary."""
+    one = summarise_diagnoses([diagnosis_with((0.6,))])
+    assert one["diversity_ratio_std"][0] == 0.0
+    assert one["any_non_finite_loss"] is False
+    none = summarise_diagnoses([])
+    assert none["seeds"] == 0
+    assert none["diversity_ratio_mean"] == {}
+    assert none["any_non_finite_loss"] is False
+
+
+def test_summarise_diagnoses_survives_a_json_round_trip():
+    """The summary holds only plain Python values."""
+    found = summarise_diagnoses([diagnosis_with((0.9, 0.2)), diagnosis_with((0.7, 0.4))])
+    assert loads(dumps(found))["seeds"] == 2
+
+
+def test_choose_by_mean_ratio_picks_the_higher_mean_of_the_class_and_reports_the_means():
+    """The version with the larger mean ratio for the class wins and both means are returned."""
+    summaries = {
+        "a": summarise_diagnoses([diagnosis_with((0.9, 0.5)), diagnosis_with((0.9, 0.7))]),
+        "b": summarise_diagnoses([diagnosis_with((0.1, 0.8)), diagnosis_with((0.1, 0.9))]),
+    }
+    found = choose_by_mean_ratio(summaries, 1)
+    assert found["chosen"] == "b"
+    assert found["label"] == 1
+    assert found["means"] == pytest.approx({"a": 0.6, "b": 0.85})
+    assert choose_by_mean_ratio(summaries, 0)["chosen"] == "a"
+
+
+def test_choose_by_mean_ratio_keeps_the_first_version_on_a_tie():
+    """Equal means resolve to the version listed first."""
+    summary = summarise_diagnoses([diagnosis_with((0.5,))])
+    assert choose_by_mean_ratio({"first": summary, "second": summary}, 0)["chosen"] == "first"
+
+
+VERSION_SETTINGS = {
+    "spectral_norm": False,
+    "loss": "bce",
+    "batch_norm": True,
+    "gradient_penalty_weight": 0.0,
+    "augment": False,
+    "betas": (0.5, 0.999),
+    "generator_lr": 2e-4,
+    "discriminator_lr": 2e-4,
+}
+
+
+def run_version(seed, **overrides):
+    """Trains the tiny version for one epoch on 16 random images and returns the generator and history."""
+    images = random_images(16)
+    labels = torch.arange(16) % 3
+    settings = dict(
+        epochs=1, batch_size=8, base_channels=8, device=DEVICE, snapshot_epochs=(1,), latent_dim=8
+    )
+    settings.update(overrides)
+    return train_gan_version(VERSION_SETTINGS, images, labels, seed, **settings)
+
+
+def test_train_gan_version_is_reproducible_for_a_seed_and_differs_between_seeds():
+    """The initialisation and the training both follow the seed, so equal seeds give equal generators."""
+    first, history_first = run_version(7)
+    again, history_again = run_version(7)
+    other, _ = run_version(8)
+    assert history_first["generator_loss"] == history_again["generator_loss"]
+    assert torch.equal(parameters_of(first), parameters_of(again))
+    assert not torch.equal(parameters_of(first), parameters_of(other))
+
+
+def test_train_gan_version_returns_a_generator_for_every_class_and_a_history_with_snapshots():
+    """The generator can sample all classes and the history carries the requested snapshot."""
+    generator, history = run_version(7)
+    assert generate(generator, torch.arange(3), DEVICE, 0).shape == (3, 1, 64, 64)
+    assert set(history["snapshots"]) == {1}
+
+
+def test_train_gan_version_uses_the_settings_of_the_version():
+    """The Wasserstein settings build a critic without batch normalisation and train with them."""
+    settings = {**VERSION_SETTINGS, "loss": "wgan", "batch_norm": False, "gradient_penalty_weight": 10.0}
+    images = random_images(16)
+    generator, history = train_gan_version(
+        settings, images, torch.arange(16) % 3, 7,
+        epochs=1, batch_size=8, base_channels=8, device=DEVICE, latent_dim=8,
+    )
+    assert history["discriminator_loss"][0] != 0.0
+    assert isfinite(history["generator_loss"][0])
