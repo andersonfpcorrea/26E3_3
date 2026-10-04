@@ -4,9 +4,10 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
-from PIL import Image
 from torch import Tensor
 from torch.nn.functional import interpolate
+
+from dlv.data import load_rgb_on_white
 
 
 def plot_history(history: dict, path: Path) -> Figure:
@@ -255,8 +256,7 @@ def plot_image_grid(
     for axis in axes.ravel():
         axis.axis("off")
     for axis, image_path, caption in zip(axes.ravel(), paths, captions):
-        with Image.open(image_path) as image:
-            axis.imshow(image.convert("RGB"))
+        axis.imshow(load_rgb_on_white(image_path))
         axis.set_title(caption, fontsize=7)
     figure.suptitle(title, fontsize=10)
     figure.tight_layout()

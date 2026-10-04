@@ -7,7 +7,7 @@ from PIL import Image
 from torch import Tensor
 from transformers import CLIPModel, CLIPProcessor
 
-from dlv.data import file_digest, is_readable_image
+from dlv.data import file_digest, is_readable_image, load_rgb_on_white
 
 CLIP_CHECKPOINT = "openai/clip-vit-base-patch32"
 
@@ -64,14 +64,11 @@ def projected_features(output) -> Tensor:
 def embed_images(model, processor, paths: list[Path], device, batch_size: int = 64) -> Tensor:
     """Embeds images with CLIP into unit-length float32 rows on the CPU.
 
-    Every file is opened as RGB and processed in batches of ``batch_size``.
+    Every file is opened as RGB, transparent pixels shown as white, and processed in batches of ``batch_size``.
     """
     batches = []
     for start in range(0, len(paths), batch_size):
-        images = []
-        for path in paths[start : start + batch_size]:
-            with Image.open(path) as image:
-                images.append(image.convert("RGB"))
+        images = [load_rgb_on_white(path) for path in paths[start : start + batch_size]]
         pixel_values = processor(images=images, return_tensors="pt")["pixel_values"].to(device)
         features = projected_features(model.get_image_features(pixel_values=pixel_values))
         batches.append(unit_rows(features.float()).cpu())

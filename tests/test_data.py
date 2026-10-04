@@ -22,6 +22,7 @@ from dlv.data import (
     download_kaggle_dataset,
     imagenet_transform,
     list_image_folder,
+    load_rgb_on_white,
     random_crop_flip,
     stratified_split,
 )
@@ -392,3 +393,24 @@ def test_tensor_batches_works_with_the_training_loop():
     history = fit(model, batches, batches, optimizer, epochs=3, device=torch.device("cpu"))
     assert history["train_loss"][-1] < history["train_loss"][0]
     assert evaluate(model, batches, torch.device("cpu"), num_classes=2)["accuracy"] == 1.0
+
+
+def test_load_rgb_on_white_shows_transparent_pixels_as_white(tmp_path):
+    """Fully transparent pixels become white and opaque pixels keep their colour."""
+    image = Image.new("RGBA", (2, 1), (0, 0, 0, 0))
+    image.putpixel((1, 0), (200, 10, 10, 255))
+    image.save(tmp_path / "logo.png")
+    loaded = load_rgb_on_white(tmp_path / "logo.png")
+    assert loaded.mode == "RGB"
+    assert loaded.getpixel((0, 0)) == (255, 255, 255)
+    assert loaded.getpixel((1, 0)) == (200, 10, 10)
+
+
+def test_load_rgb_on_white_handles_palette_transparency_and_plain_images(tmp_path):
+    """A palette image with a transparent index and an ordinary RGB image both load as RGB."""
+    palette = Image.new("P", (1, 1), 0)
+    palette.putpalette([0, 0, 0])
+    palette.save(tmp_path / "p.png", transparency=0)
+    Image.new("RGB", (1, 1), (5, 6, 7)).save(tmp_path / "rgb.png")
+    assert load_rgb_on_white(tmp_path / "p.png").getpixel((0, 0)) == (255, 255, 255)
+    assert load_rgb_on_white(tmp_path / "rgb.png").getpixel((0, 0)) == (5, 6, 7)

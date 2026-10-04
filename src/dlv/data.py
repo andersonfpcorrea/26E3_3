@@ -71,6 +71,20 @@ def is_readable_image(path: Path) -> bool:
     return True
 
 
+def load_rgb_on_white(path: Path) -> Image.Image:
+    """Opens an image as RGB, showing transparent pixels as white.
+
+    Converting a transparent PNG straight to RGB keeps whatever colour sits
+    under the transparent pixels, usually black, so logos on transparent
+    backgrounds turn into black squares. Compositing on white shows them as
+    a viewer would.
+    """
+    with Image.open(path) as image:
+        rgba = image.convert("RGBA")
+    background = Image.new("RGBA", rgba.size, (255, 255, 255, 255))
+    return Image.alpha_composite(background, rgba).convert("RGB")
+
+
 def file_digest(path: Path) -> str:
     """Returns the SHA-256 hash of a file's bytes."""
     return sha256(path.read_bytes()).hexdigest()
