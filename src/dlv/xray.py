@@ -19,16 +19,43 @@ XRAY_CLASSES = (
 )
 
 
+def find_class_root(root: Path) -> Path:
+    """Locates the folder that directly holds the class folders.
+
+    Root itself qualifies when one of the three class folders with an
+    ``images`` directory sits inside it; otherwise the search goes downward
+    and the shallowest such folder wins, ties broken by sorted path. Raises
+    ValueError naming root and the expected layout when none is found.
+    """
+    root = Path(root)
+    candidates = {root} if root.is_dir() else set()
+    for folder, _ in XRAY_CLASSES:
+        candidates.update(path.parent.parent for path in root.rglob(f"{folder}/images") if path.is_dir())
+    holders = sorted(
+        (path for path in candidates if any((path / folder / "images").is_dir() for folder, _ in XRAY_CLASSES)),
+        key=lambda path: (len(path.relative_to(root).parts), str(path)),
+    )
+    if not holders:
+        raise ValueError(
+            f"no X-ray class folders found under {root}; expected "
+            f"<dataset folder>/Normal/images, <dataset folder>/Viral Pneumonia/images "
+            f"and <dataset folder>/COVID/images"
+        )
+    return holders[0]
+
+
 def list_xray_images(root: Path) -> tuple[list[Path], list[int]]:
     """Finds the readable X-ray images of the three study classes under root.
 
+    Root may be the folder holding the class folders or any ancestor of it;
+    see ``find_class_root``.
     Only files directly inside ``<class folder>/images/`` are taken, so lung
     masks and any other class folder are never listed. The label is the index
     of the class in ``XRAY_CLASSES``. Exact copies by file content keep only
     the first path in sorted order, and a content found under two classes is
     left out entirely because its label is ambiguous. Paths come back sorted.
     """
-    root = Path(root)
+    root = find_class_root(root)
     groups = {}
     for label, (folder, _) in enumerate(XRAY_CLASSES):
         images = root / folder / "images"
@@ -114,8 +141,27 @@ def mix_synthetic(
 
     Returns new images and labels; the inputs are not modified. Only training
     data should pass through here, so evaluation sets stay purely real.
+    Raises ValueError when the dtypes, the number of dimensions or the image
+    shape differ, or when the label count does not match the real images, so
+    nothing is cast or truncated silently.
     """
-    images = torch.cat([real_images, synthetic_images.to(real_images.dtype)], dim=0)
+    if real_images.dtype != synthetic_images.dtype:
+        raise ValueError(
+            f"dtype mismatch: real images are {real_images.dtype}, synthetic images are {synthetic_images.dtype}"
+        )
+    if real_images.dim() != synthetic_images.dim():
+        raise ValueError(
+            f"dimensions mismatch: real images have {real_images.dim()}, synthetic images have {synthetic_images.dim()}"
+        )
+    if real_images.shape[1:] != synthetic_images.shape[1:]:
+        raise ValueError(
+            f"shape mismatch: real images are {tuple(real_images.shape[1:])}, synthetic images are {tuple(synthetic_images.shape[1:])}"
+        )
+    if len(real_labels) != real_images.shape[0]:
+        raise ValueError(
+            f"got {len(real_labels)} labels for {real_images.shape[0]} real images"
+        )
+    images = torch.cat([real_images, synthetic_images], dim=0)
     labels = list(real_labels) + [synthetic_label] * synthetic_images.shape[0]
     return images, labels
 
@@ -126,7 +172,15 @@ def summarise_runs(reports: list[list[dict]], metric: str) -> list[dict]:
     ``reports`` holds one ``class_report`` result per run. Returns, in class
     order, a dict with the class index, the mean and the sample standard
     deviation of the metric. A single run has a standard deviation of 0.0.
+    Raises ValueError for no reports, reports with different class counts, or
+    a metric name the reports do not hold.
     """
+    if not reports:
+        raise ValueError("no reports to summarise")
+    if len({len(report) for report in reports}) != 1:
+        raise ValueError("all reports must have the same number of classes")
+    if any(metric not in row for report in reports for row in report):
+        raise ValueError(f"unknown metric {metric!r}")
     summary = []
     for position in range(len(reports[0])):
         values = [report[position][metric] for report in reports]

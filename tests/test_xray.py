@@ -195,3 +195,97 @@ def test_summarise_runs_single_run_has_zero_std():
     """One run has nothing to vary against."""
     report = [{"recall": 0.4, "precision": 0.4, "f1": 0.4, "support": 1}]
     assert summarise_runs([report], "recall") == [{"class": 0, "mean": 0.4, "std": 0.0}]
+
+
+def test_listing_finds_class_folders_under_wrapper_parent(tmp_path):
+    """A root above the wrapper folder still finds the class folders."""
+    wrapper = make_xray_tree(tmp_path / "COVID-19_Radiography_Dataset")
+    paths, labels = list_xray_images(tmp_path)
+    assert len(paths) == 9
+    assert all(wrapper in path.parents for path in paths)
+
+
+def test_listing_finds_class_folders_when_root_is_wrapper(tmp_path):
+    """The wrapper folder itself works as root."""
+    wrapper = make_xray_tree(tmp_path / "COVID-19_Radiography_Dataset")
+    paths, _ = list_xray_images(wrapper)
+    assert len(paths) == 9
+
+
+def test_listing_uses_shallowest_candidate(tmp_path):
+    """With several candidate folders the shallowest one wins."""
+    make_xray_tree(tmp_path / "a", per_class=2)
+    make_xray_tree(tmp_path / "b" / "deeper", per_class=3)
+    paths, _ = list_xray_images(tmp_path)
+    assert len(paths) == 6
+
+
+def test_listing_raises_when_no_class_folder(tmp_path):
+    """An empty root raises an error naming root and the layout."""
+    with pytest.raises(ValueError, match=str(tmp_path)) as error:
+        list_xray_images(tmp_path)
+    assert "Normal/images" in str(error.value)
+
+
+def test_mix_synthetic_rejects_dtype_mismatch():
+    """A float synthetic tensor is not cast to uint8."""
+    real = torch.zeros((2, 1, 4, 4), dtype=torch.uint8)
+    fake = torch.zeros((2, 1, 4, 4), dtype=torch.float32)
+    with pytest.raises(ValueError, match="dtype"):
+        mix_synthetic(real, [0, 1], fake, 2)
+
+
+def test_mix_synthetic_rejects_dimension_mismatch():
+    """Different numbers of dimensions are rejected."""
+    real = torch.zeros((2, 1, 4, 4), dtype=torch.uint8)
+    fake = torch.zeros((2, 4, 4), dtype=torch.uint8)
+    with pytest.raises(ValueError, match="dimensions"):
+        mix_synthetic(real, [0, 1], fake, 2)
+
+
+def test_mix_synthetic_rejects_shape_mismatch():
+    """Different image shapes are rejected."""
+    real = torch.zeros((2, 1, 4, 4), dtype=torch.uint8)
+    fake = torch.zeros((2, 1, 8, 8), dtype=torch.uint8)
+    with pytest.raises(ValueError, match="shape"):
+        mix_synthetic(real, [0, 1], fake, 2)
+
+
+def test_mix_synthetic_rejects_label_count_mismatch():
+    """The label list must match the real images."""
+    real = torch.zeros((2, 1, 4, 4), dtype=torch.uint8)
+    fake = torch.zeros((1, 1, 4, 4), dtype=torch.uint8)
+    with pytest.raises(ValueError, match="labels"):
+        mix_synthetic(real, [0, 1, 1], fake, 2)
+
+
+def test_summarise_runs_rejects_empty_reports():
+    """No reports raise a clear error."""
+    with pytest.raises(ValueError, match="no reports"):
+        summarise_runs([], "recall")
+
+
+def test_summarise_runs_rejects_different_lengths():
+    """Reports with different class counts raise."""
+    row = {"recall": 0.5, "precision": 0.5, "f1": 0.5, "support": 1}
+    with pytest.raises(ValueError, match="same number of classes"):
+        summarise_runs([[row, row], [row]], "recall")
+
+
+def test_summarise_runs_rejects_unknown_metric():
+    """An unknown metric name raises and names it."""
+    row = {"recall": 0.5, "precision": 0.5, "f1": 0.5, "support": 1}
+    with pytest.raises(ValueError, match="accuracy"):
+        summarise_runs([[row]], "accuracy")
+
+
+def test_sampling_second_draw_excluding_first_does_not_overlap():
+    """A test set drawn with exclude never overlaps the first draw."""
+    labels = [0] * 20 + [1] * 20
+    first = sample_per_class(labels, {0: 5, 1: 3}, seed=1)
+    second = sample_per_class(labels, {0: 7, 1: 9}, seed=2, exclude=first)
+    assert not set(first) & set(second)
+    assert [labels[i] for i in second].count(0) == 7
+    assert [labels[i] for i in second].count(1) == 9
+    assert [labels[i] for i in first].count(0) == 5
+    assert [labels[i] for i in first].count(1) == 3
