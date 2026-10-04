@@ -4,6 +4,8 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
+from torch import Tensor
+from torch.nn.functional import interpolate
 
 
 def plot_history(history: dict, path: Path) -> Figure:
@@ -56,6 +58,121 @@ def plot_per_class_accuracy(
     axis.set_ylim(0, 1.05)
     axis.set_xlabel("Classe")
     axis.set_ylabel("Acurácia")
+    figure.tight_layout()
+    figure.savefig(path, dpi=150)
+    return figure
+
+
+def plot_attention_maps(
+    images: Tensor, maps: Tensor, titles: list[str], path: Path
+) -> Figure:
+    """Draws each image next to its attention maps, one panel per head.
+
+    `images` is a uint8 tensor (n, 3, h, w) and `maps` a float tensor (n, heads, g, g).
+    Each map is upsampled to the image size and drawn semi-transparent over the
+    painting, so the image stays visible under it. `titles` has one entry per row.
+    """
+    count, heads = maps.shape[0], maps.shape[1]
+    height, width = images.shape[-2:]
+    upsampled = interpolate(maps.float(), size=(height, width), mode="bilinear", align_corners=False)
+    figure, axes = plt.subplots(
+        count, heads + 1, figsize=(2.2 * (heads + 1), 2.5 * count), squeeze=False
+    )
+    for row in range(count):
+        painting = images[row].permute(1, 2, 0).numpy()
+        axes[row][0].imshow(painting)
+        axes[row][0].set_title(titles[row], fontsize=9)
+        for head in range(heads):
+            axis = axes[row][head + 1]
+            axis.imshow(painting)
+            axis.imshow(upsampled[row, head].numpy(), cmap="jet", alpha=0.5)
+            if row == 0:
+                axis.set_title(f"Cabeça {head + 1}", fontsize=9)
+    for axis in axes.ravel():
+        axis.set_xticks([])
+        axis.set_yticks([])
+    figure.tight_layout()
+    figure.savefig(path, dpi=150)
+    return figure
+
+
+def plot_group_accuracy(entries: list[dict], path: Path, title: str) -> Figure:
+    """Draws horizontal bars of accuracy per group, with the sample count on each bar.
+
+    `entries` is the output of `accuracy_by_group`; the first entry is drawn at the top.
+    """
+    figure, axis = plt.subplots(figsize=(7, max(2.5, 0.45 * len(entries) + 1.5)))
+    positions = range(len(entries))
+    accuracies = [entry["accuracy"] for entry in entries]
+    axis.barh(positions, accuracies)
+    axis.set_yticks(positions, labels=[entry["group"] for entry in entries])
+    axis.invert_yaxis()
+    axis.set_xlim(0, 1.3)
+    for position, entry in zip(positions, entries):
+        axis.text(
+            entry["accuracy"] + 0.01,
+            position,
+            f"{entry['accuracy']:.0%} (n={entry['count']})",
+            va="center",
+            fontsize=8,
+        )
+    axis.set_xlabel("Acurácia")
+    axis.set_title(title)
+    figure.tight_layout()
+    figure.savefig(path, dpi=150)
+    return figure
+
+
+def plot_histories(histories: dict[str, dict], path: Path) -> Figure:
+    """Draws loss and accuracy of several named runs on shared axes.
+
+    Loss shows training (dashed) and validation (solid) curves; accuracy shows validation only.
+    Each run keeps one colour in both panels and may have its own number of epochs.
+    """
+    figure, (loss_axis, accuracy_axis) = plt.subplots(1, 2, figsize=(11, 4))
+    for index, (name, history) in enumerate(histories.items()):
+        colour = f"C{index}"
+        epochs = range(1, len(history["train_loss"]) + 1)
+        loss_axis.plot(
+            epochs, history["train_loss"], linestyle="--", color=colour, label=f"{name} (treino)"
+        )
+        loss_axis.plot(
+            epochs, history["val_loss"], marker="o", color=colour, label=f"{name} (validação)"
+        )
+        val_epochs = range(1, len(history["val_accuracy"]) + 1)
+        accuracy_axis.plot(
+            val_epochs, history["val_accuracy"], marker="o", color=colour, label=name
+        )
+    loss_axis.set_xlabel("Época")
+    loss_axis.set_ylabel("Perda")
+    loss_axis.legend(fontsize=8)
+    accuracy_axis.set_xlabel("Época")
+    accuracy_axis.set_ylabel("Acurácia")
+    accuracy_axis.legend(fontsize=8)
+    figure.tight_layout()
+    figure.savefig(path, dpi=150)
+    return figure
+
+
+def plot_class_counts(counts: dict[str, dict[str, int]], path: Path) -> Figure:
+    """Draws grouped bars of samples per class, one bar for each split.
+
+    `counts` maps a split name to a mapping from class name to sample count.
+    """
+    splits = list(counts)
+    class_names = list(counts[splits[0]])
+    width = 0.8 / len(splits)
+    figure, axis = plt.subplots(figsize=(max(6, 0.9 * len(class_names)), 4))
+    for split_index, split in enumerate(splits):
+        offsets = [
+            class_index + (split_index - (len(splits) - 1) / 2) * width
+            for class_index in range(len(class_names))
+        ]
+        axis.bar(offsets, [counts[split][name] for name in class_names], width, label=split)
+    axis.set_xticks(range(len(class_names)), labels=class_names, rotation=45, ha="right")
+    axis.set_xlabel("Classe")
+    axis.set_ylabel("Número de amostras")
+    axis.legend()
     figure.tight_layout()
     figure.savefig(path, dpi=150)
     return figure
