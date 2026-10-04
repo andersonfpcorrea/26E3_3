@@ -63,7 +63,7 @@ print("imagens por classe na validação deles:", validation_counts_original)
 print("imagens de COVID-19 na validação deles:", validation_counts_original.get("COVID-19", 0))
 print("acurácia de quem sempre responde a classe mais comum:", round(majority_share, 4))
 for name, on_validation, on_test in zip(CLASS_NAMES, original_validation_classes, original_test_classes):
-    print(f"{name}: revocação na validação {on_validation['recall']:.4f}, no teste real {on_test['recall']:.4f}")
+    print(f"{name}: recall na validação {on_validation['recall']:.4f}, no teste real {on_test['recall']:.4f}")
 print("acurácia no teste real:", round(original_test_report["accuracy"], 4))
 
 original_history_figure = plot_history(original_history, run.figures_dir / "original_history.png")

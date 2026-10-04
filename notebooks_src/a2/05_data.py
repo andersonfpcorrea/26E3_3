@@ -31,7 +31,7 @@ source_indices = {
 print("arquivos de imagem no download:", files_found)
 print("cópias exatas removidas:", duplicates_removed)
 print("miniaturas removidas (a imagem original está no corpus):", thumbnails_removed)
-print("arquivos ilegíveis:", unreadable_or_other)
+print("arquivos de imagem que não abriram ou não são imagem:", unreadable_or_other)
 print("imagens no corpus:", len(images))
 print("por origem:", by_source)
 print("categorias de anúncio:", len(ad_categories))

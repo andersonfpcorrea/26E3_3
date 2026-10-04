@@ -10,6 +10,6 @@
 - Memória de GPU: cerca de 0,5 GB (medido na T4)
 - Memória RAM: cerca de 2 GB (processo principal, medido na T4)
 - Disco: 3 GB livres
-- Tempo estimado: cerca de 2 minutos (medido na T4, sem contar a inicialização da máquina; pode variar com a velocidade do download)
+- Tempo estimado: cerca de 2 minutos (medido na T4, sem contar a inicialização da máquina; o tempo varia com a velocidade do download)
 
 **Como executar:** menu *Ambiente de execução*, *Executar tudo*. O notebook baixa os dados sozinho e não precisa de login.

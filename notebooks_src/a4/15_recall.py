@@ -71,7 +71,7 @@ print("teste real por classe:", test_counts)
 recall_figure = plot_arm_metric(
     {arm: arm_summaries[arm]["recall"] for arm in ARMS},
     CLASS_NAMES,
-    "Revocação no teste real (média e desvio padrão, 3 seeds)",
+    "Recall no teste real (média e desvio padrão, 3 seeds)",
     run.figures_dir / "recall_arms.png",
 )
 confusion_figures = {

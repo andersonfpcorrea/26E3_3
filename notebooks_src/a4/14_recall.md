@@ -1,4 +1,4 @@
-## Parte D: as imagens sintéticas aumentam a revocação de COVID-19?
+## Parte D: as imagens sintéticas aumentam o recall de COVID-19?
 
 - Classificador: `resnet18` do torchvision com pesos da ImageNet, todas as camadas treinadas
 - Entrada: 64x64 em tons de cinza, repetida em três canais, ampliada para 128 e normalizada com a média e o desvio padrão da ImageNet
