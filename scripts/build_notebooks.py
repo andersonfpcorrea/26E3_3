@@ -39,7 +39,7 @@ PACKAGE_DIR = ROOT / "src" / "dlv"
 CELLS_DIR = ROOT / "notebooks_src"
 BUILD_DIR = ROOT / "build"
 EXECUTED_DIR = ROOT / "notebooks"
-NOTEBOOKS = {"a1": "A1_vision_transformers", "a3": "A3_cnn_kaggle"}
+NOTEBOOKS = {"a1": "A1_vision_transformers", "a2": "A2_clip_ads16", "a3": "A3_cnn_kaggle"}
 PACKAGE = "dlv"
 
 
