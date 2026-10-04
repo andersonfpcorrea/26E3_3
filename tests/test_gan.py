@@ -11,6 +11,7 @@ from dlv.gan import (
     ConditionalDiscriminator,
     ConditionalGenerator,
     diagnose_gan,
+    differentiable_augment,
     discriminator_loss,
     generate,
     generator_loss,
@@ -498,3 +499,38 @@ def test_train_gan_rejects_a_negative_penalty_weight():
     """A negative gradient penalty weight is refused."""
     with pytest.raises(ValueError):
         run_training(loss="wgan", gradient_penalty_weight=-1.0)
+
+
+def test_differentiable_augment_keeps_shape_and_changes_the_images():
+    """Translation and brightness change the batch and keep its shape."""
+    images = torch.rand(4, 1, 64, 64) * 2 - 1
+    augmented = differentiable_augment(images, torch.Generator().manual_seed(0))
+    assert augmented.shape == images.shape
+    assert not torch.allclose(augmented, images)
+
+
+def test_differentiable_augment_without_ranges_is_the_identity():
+    """Zero shift and zero brightness leave the images as they were."""
+    images = torch.rand(4, 1, 64, 64) * 2 - 1
+    same = differentiable_augment(images, torch.Generator().manual_seed(0), max_shift=0.0, brightness=0.0)
+    assert torch.allclose(same, images, atol=1e-5)
+
+
+def test_differentiable_augment_passes_gradients_and_is_reproducible():
+    """Gradients reach the input and the same generator seed gives the same result."""
+    images = (torch.rand(4, 1, 64, 64) * 2 - 1).requires_grad_(True)
+    first = differentiable_augment(images, torch.Generator().manual_seed(3))
+    second = differentiable_augment(images, torch.Generator().manual_seed(3))
+    assert torch.equal(first, second)
+    first.sum().backward()
+    assert images.grad is not None and images.grad.abs().sum() > 0
+
+
+def test_train_gan_with_augmentation_trains_and_stays_reproducible():
+    """Augmented training updates both networks and repeats exactly for one seed."""
+    first_generator, first_discriminator, history = run_training(augment=True, seed=4)
+    second_generator, _, _ = run_training(augment=True, seed=4)
+    assert torch.equal(parameters_of(first_generator), parameters_of(second_generator))
+    assert all(isfinite(value) for value in history["discriminator_loss"])
+    plain_generator, _, _ = run_training(seed=4)
+    assert not torch.equal(parameters_of(first_generator), parameters_of(plain_generator))

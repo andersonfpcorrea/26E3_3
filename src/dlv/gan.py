@@ -5,7 +5,7 @@ from math import isfinite
 
 import torch
 from torch import Tensor, nn
-from torch.nn.functional import binary_cross_entropy_with_logits, relu
+from torch.nn.functional import affine_grid, binary_cross_entropy_with_logits, grid_sample, relu
 from torch.nn.utils import parametrizations
 from torchvision.utils import make_grid
 
@@ -183,6 +183,29 @@ def gradient_penalty(
     return ((norms - 1.0) ** 2).mean()
 
 
+def differentiable_augment(
+    images: Tensor, generator: torch.Generator, max_shift: float = 0.125, brightness: float = 0.2
+) -> Tensor:
+    """Shifts and brightens every image of a batch in -1 to 1 by its own random amounts, keeping gradients.
+
+    The shift is up to ``max_shift`` of the image size in each direction, with
+    zeros filling the border, and the brightness offset is up to ``brightness``.
+    Applied to real and generated images alike before the discriminator, it
+    makes memorising the small training set harder. Random numbers come from
+    ``generator``, which must live on the images' device.
+    """
+    count = images.shape[0]
+    draws = torch.rand(count, 3, generator=generator, device=images.device) * 2 - 1
+    theta = torch.zeros(count, 2, 3, device=images.device)
+    theta[:, 0, 0] = 1.0
+    theta[:, 1, 1] = 1.0
+    theta[:, 0, 2] = draws[:, 0] * max_shift * 2
+    theta[:, 1, 2] = draws[:, 1] * max_shift * 2
+    grid = affine_grid(theta, list(images.shape), align_corners=False)
+    shifted = grid_sample(images, grid, mode="bilinear", padding_mode="zeros", align_corners=False)
+    return shifted + draws[:, 2].view(count, 1, 1, 1) * brightness
+
+
 def unit_range(images: Tensor) -> Tensor:
     """Returns images as floats in 0 to 1: uint8 is divided by 255, floats are taken as already scaled."""
     if images.dtype == torch.uint8:
@@ -284,6 +307,7 @@ def train_gan(
     betas=(0.5, 0.999),
     seed: int = 42,
     gradient_penalty_weight: float = 0.0,
+    augment: bool = False,
     snapshot_epochs=(),
     snapshot_noise: Tensor | None = None,
     snapshot_labels: Tensor | None = None,
@@ -311,7 +335,8 @@ def train_gan(
     `seed` governs the shuffling order, the training noise and the fixed
     diversity and snapshot noise, all drawn from local generators; the global
     random state is left untouched. A positive ``gradient_penalty_weight`` adds the
-    WGAN-GP penalty to the discriminator loss. Initialising the networks is the caller's
+    WGAN-GP penalty to the discriminator loss. With ``augment``, every image the
+    discriminator scores, real or generated, first goes through ``differentiable_augment``. Initialising the networks is the caller's
     job and is not covered by `seed`.
     """
     if loss not in LOSS_KINDS:
@@ -372,8 +397,12 @@ def train_gan(
                 noise = torch.randn(batch, latent_dim, device=device, generator=noise_generator)
                 with torch.no_grad():
                     fake = generator(noise, batch_labels)
-                real_logits = discriminator(real, batch_labels)
-                fake_logits = discriminator(fake, batch_labels)
+                real_scored, fake_scored = real, fake
+                if augment:
+                    real_scored = differentiable_augment(real, noise_generator)
+                    fake_scored = differentiable_augment(fake, noise_generator)
+                real_logits = discriminator(real_scored, batch_labels)
+                fake_logits = discriminator(fake_scored, batch_labels)
                 discriminator_step_loss = discriminator_loss(real_logits, fake_logits, loss)
                 if gradient_penalty_weight > 0:
                     discriminator_step_loss = discriminator_step_loss + gradient_penalty_weight * gradient_penalty(
@@ -385,7 +414,10 @@ def train_gan(
 
                 noise = torch.randn(batch, latent_dim, device=device, generator=noise_generator)
                 with frozen_parameters(discriminator):
-                    generated_logits = discriminator(generator(noise, batch_labels), batch_labels)
+                    generated = generator(noise, batch_labels)
+                    if augment:
+                        generated = differentiable_augment(generated, noise_generator)
+                    generated_logits = discriminator(generated, batch_labels)
                     generator_step_loss = generator_loss(generated_logits, loss)
                     generator_optimizer.zero_grad(set_to_none=True)
                     generator_step_loss.backward()
