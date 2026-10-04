@@ -2,7 +2,7 @@
 
 ## Problema
 
-![Atividade 1: dos dados às medidas](diagrams/a1_pipeline.png){: width="665"}
+![Atividade 1: dos dados às medidas](diagrams/a1_pipeline.png)
 
 - Tarefa: dizer em qual de 8 períodos uma pintura foi feita, olhando só a imagem.
 - Dataset: WikiArt, na cópia `Artificio/WikiArt` do Hugging Face. São 103.250 linhas, com imagens já em 256x256.
@@ -45,7 +45,7 @@
 - Os conjuntos ficaram balanceados por período, como mostra a figura.
 - Um pintor muito produtivo pesa no teste de dois períodos: Max Ernst tem 56 das 300 pinturas de teste de 1925 a 1949 (18,7%), e Sam Francis tem 46 das 300 de 1950 em diante (15,3%).
 
-![Pinturas por período em cada conjunto](figures/a1_class_counts.png)
+![Número de pinturas por período em cada conjunto de dados](figures/a1_class_counts.png)
 
 **Estilo e data são coisas diferentes**
 
@@ -228,9 +228,9 @@ O modelo está em `src/dlv/vit.py`, classe `VisionTransformer`. O caminho da ima
     - "até 1599" é quase resolvido: 269 de 300.
 - **O buraco em 1875 a 1899.** Das 300 pinturas desse período, o modelo pré-treinado acerta 29 (9,7%, abaixo do acaso e pior que os 28,0% do ViT do zero), manda 91 para 1850 a 1874 e 90 para 1900 a 1924. No teste inteiro, ele só responde "1875 a 1899" 68 vezes em 2.400. O modelo quase não usa essa classe e divide as pinturas dela entre os dois vizinhos. Como os erros caem nos vizinhos, a métrica de 1 período de tolerância esconde esse defeito. A acurácia por período mostra.
 
-![Matriz de confusão do ViT do zero no teste](figures/a1_confusion_scratch.png)
+![Matriz de confusão do ViT do zero, no conjunto de teste](figures/a1_confusion_scratch.png)
 
-![Matriz de confusão do ViT-B/16 pré-treinado no teste](figures/a1_confusion_pretrained.png)
+![Matriz de confusão do ViT-B/16 pré-treinado, no conjunto de teste](figures/a1_confusion_pretrained.png)
 
 ## O que o modelo observa
 
@@ -243,7 +243,7 @@ O modelo está em `src/dlv/vit.py`, classe `VisionTransformer`. O caminho da ima
 - Cada painel tem a sua própria escala de cores. O vermelho marca o maior valor daquele painel. As cores não servem para comparar um painel com outro.
 - A grade é de 8x8 patches, ampliada sobre a imagem. Cada mancha cobre uma região de pelo menos 8x8 pixels.
 
-![Attention do CLS token no último bloco, uma coluna por head](figures/a1_attention_last_block.png)
+![Attention do CLS token no último bloco, uma coluna por head. Cada painel tem sua própria escala de cores](figures/a1_attention_last_block.png)
 
 **Último bloco, pintura por pintura**
 
@@ -265,7 +265,7 @@ A pintura 3 é abstrata. Não há figura para a attention seguir.
 - **O padrão não é estável.** Na pintura 3 a head 2 está na borda, e na 5 ela é a mais espalhada das três. A head 1 cai sobre a cena nas pinturas 4 e 6. Seis pinturas é pouco para afirmar um papel fixo por head.
 - **Não há diferença visível entre os mapas dos acertos e os dos erros.**
 
-![Attention do CLS token no primeiro bloco, média das heads](figures/a1_attention_first_block.png)
+![Attention do CLS token no primeiro bloco, média das heads. Cada painel tem sua própria escala de cores](figures/a1_attention_first_block.png)
 
 **Primeiro bloco**
 
@@ -326,9 +326,9 @@ A pintura 3 é abstrata. Não há figura para a attention seguir.
 - Sem ganho: Impressionism, Symbolism, Baroque (48,0% para 42,0%, com 50 pinturas) e Neoclassicism (9,7% para 12,9%, uma pintura a mais em 31).
 - Uma leitura possível, não conferida nos dados: Impressionism e Symbolism têm muitas pinturas do fim do século XIX, onde fica o buraco descrito em Resultados.
 
-![Acurácia por movimento, ViT do zero](figures/a1_styles_scratch.png)
+![Acurácia por movimento artístico, ViT do zero](figures/a1_styles_scratch.png)
 
-![Acurácia por movimento, ViT-B/16 pré-treinado](figures/a1_styles_pretrained.png)
+![Acurácia por movimento artístico, ViT-B/16 pré-treinado](figures/a1_styles_pretrained.png)
 
 ## ViT do zero ou ViT pré-treinado
 

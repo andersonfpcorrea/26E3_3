@@ -14,7 +14,12 @@ the width in points after the image in the Markdown line, for example
 file's ratio. Each image is embedded at about ``PRINT_DPI`` dots per inch at its
 displayed width, using a downscaled copy written to the build folder; the files
 under ``report`` are never modified and small images are never upscaled.
-Headings are kept on the same page as the block that follows.
+Widths are computed in points and written to the HTML in pixels (4/3 of the
+points), because the PDF library reads a width attribute as pixels. The alt text
+of each image is printed as a caption under it, kept on the same page. Every
+top-level heading after the first starts a new page, and a paragraph made only
+of bold text stays with the block that follows. Headings are kept on the same
+page as the block that follows.
 """
 
 import re
@@ -33,7 +38,8 @@ OUTPUT_PDF = REPORT_DIR / "anderson_correa_deep-learning-and-vision_computer-vis
 
 FULL_WIDTH = 499
 SINGLE_WIDTH = 333
-MAX_HEIGHT = 700
+MAX_HEIGHT = 690
+PIXELS_PER_POINT = 4 / 3
 STRIP_RATIO = 2.4
 PRINT_DPI = 150
 PHOTO_COLORS = 4000
@@ -53,6 +59,10 @@ table { width: 100%; margin: 8px 0; font-size: 8.5pt; }
 th, td { border: 1px solid #b8c2d0; padding: 3px 6px; }
 th { background: #e8edf4; }
 img { margin: 6px 0; }
+.figure { margin-bottom: 0; -pdf-keep-with-next: true; }
+.caption { font-size: 8pt; color: #4a5568; margin-top: 0; margin-bottom: 10px; text-align: left; }
+.label { -pdf-keep-with-next: true; }
+h1.new-page { page-break-before: always; }
 """
 
 
@@ -88,23 +98,32 @@ def is_photographic(image: Image.Image) -> bool:
     return len(image.convert("RGB").getcolors(maxcolors=PHOTO_COLORS) or ()) == 0
 
 
+def flatten_on_white(image: Image.Image) -> Image.Image:
+    """Returns an RGB copy of ``image``; any transparency is composited on a white background."""
+    rgba = image.convert("RGBA")
+    background = Image.new("RGBA", rgba.size, (255, 255, 255, 255))
+    return Image.alpha_composite(background, rgba).convert("RGB")
+
+
 def embedded_copy(source: str, width_points: int, build_dir: Path) -> str:
     """Returns the path of the image to embed at ``width_points`` wide on the page.
 
-    When the file has more pixels than ``PRINT_DPI`` needs at that width, a
-    downscaled copy is written to ``build_dir`` and its path is returned.
-    Otherwise the source path is returned unchanged. URLs pass through.
+    When the file has more pixels than ``PRINT_DPI`` needs at that width, or
+    has transparency, a copy is written to ``build_dir`` (downscaled, and
+    composited on white) and its path is returned. Otherwise the source path is
+    returned unchanged. URLs pass through.
     """
     if source.startswith(("http://", "https://", "data:")):
         return source
     target = round(width_points * PRINT_DPI / 72)
     with Image.open(source) as image:
-        if image.width <= target:
+        transparent = image.mode in ("RGBA", "LA", "P")
+        if image.width <= target and not transparent:
             return source
-        height = max(1, round(image.height * target / image.width))
-        resized = image.convert("RGBA" if image.mode in ("RGBA", "LA", "P") else "RGB").resize(
-            (target, height), Image.LANCZOS
-        )
+        flat = flatten_on_white(image)
+    if flat.width > target:
+        flat = flat.resize((target, max(1, round(flat.height * target / flat.width))), Image.LANCZOS)
+    resized = flat
     build_dir = Path(build_dir)
     build_dir.mkdir(parents=True, exist_ok=True)
     name = f"{sha1(source.encode()).hexdigest()[:12]}_{Path(source).stem}"
@@ -118,14 +137,15 @@ def embedded_copy(source: str, width_points: int, build_dir: Path) -> str:
 
 
 def size_images(html: str, base_dir: Path, build_dir: Path) -> str:
-    """Gives every image tag a width and height from its file and points it at a print-resolution copy.
+    """Sizes every image, points it at a print-resolution copy and adds its caption.
 
-    A width already set on the tag is honoured.
+    A width already set on the tag is honoured, in points. Widths are written in
+    pixels. A paragraph holding only an image becomes a figure paragraph followed
+    by a caption paragraph with the alt text.
     """
 
-    def sized(match: re.Match) -> str:
+    def sized(tag: str) -> str:
         """Rewrites one image tag."""
-        tag = match.group(0)
         source = resolve_link(re.search(r'src="([^"]+)"', tag).group(1), base_dir)
         explicit = re.search(r'width="(\d+)"', tag)
         tag = re.sub(r'\s(width|height)="[^"]*"', "", tag)
@@ -135,9 +155,30 @@ def size_images(html: str, base_dir: Path, build_dir: Path) -> str:
             )
         embedded = embedded_copy(source, width, build_dir)
         tag = re.sub(r'src="[^"]+"', f'src="{embedded}"', tag)
-        return tag.replace("<img ", f'<img width="{width}" height="{height}" ', 1)
+        pixel_width = round(width * PIXELS_PER_POINT)
+        pixel_height = round(height * PIXELS_PER_POINT)
+        return tag.replace("<img ", f'<img width="{pixel_width}" height="{pixel_height}" ', 1)
 
-    return re.sub(r"<img [^>]*>", sized, html)
+    def figure(match: re.Match) -> str:
+        """Rewrites one paragraph that holds only an image."""
+        tag = sized(match.group(1))
+        alt = re.search(r'alt="([^"]*)"', tag)
+        caption = f'<p class="caption">{alt.group(1)}</p>' if alt and alt.group(1) else ""
+        return f'<p class="figure">{tag}</p>{caption}'
+
+    html = re.sub(r"<p>(<img [^>]*>)</p>", figure, html)
+    return re.sub(
+        r"<img [^>]*>", lambda match: match.group(0) if "height=" in match.group(0) else sized(match.group(0)), html
+    )
+
+
+def mark_page_breaks_and_labels(html: str) -> str:
+    """Marks every h1 after the first to start a page and every all-bold paragraph to stay with its block."""
+    first = html.find("<h1>")
+    if first != -1:
+        head, tail = html[: first + 4], html[first + 4 :]
+        html = head + tail.replace("<h1>", '<h1 class="new-page">')
+    return re.sub(r"<p>(<strong>(?:(?!</strong>).)*</strong>)</p>", r'<p class="label">\1</p>', html)
 
 
 def merge_sections(sections_dir: Path) -> str:
@@ -146,7 +187,7 @@ def merge_sections(sections_dir: Path) -> str:
         path.read_text(encoding="utf-8").strip()
         for path in sorted(Path(sections_dir).glob("*.md"))
     ]
-    return "\n\n---\n\n".join(parts) + "\n"
+    return "\n\n".join(parts) + "\n"
 
 
 def default_build_dir(sections_dir: Path) -> Path:
@@ -166,9 +207,9 @@ def render_html(sections_dir: Path, build_dir: Path | None = None) -> str:
         merge_sections(sections_dir),
         extensions=["tables", "fenced_code", "sane_lists", "attr_list"],
     )
-    body = size_images(
-        body.replace("<table>", '<table cellspacing="0">'), sections_dir.parent, build_dir
-    )
+    body = body.replace("<table>", '<table cellspacing="0">')
+    body = mark_page_breaks_and_labels(body)
+    body = size_images(body, sections_dir.parent, build_dir)
     return (
         "<html><head><meta charset='utf-8'>"
         f"<style>{CSS}</style></head><body>{body}</body></html>"

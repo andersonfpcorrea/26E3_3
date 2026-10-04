@@ -2,7 +2,7 @@
 
 ## Problema
 
-![Atividade 2: do corpus à busca por texto](diagrams/a2_pipeline.png){: width="665"}
+![Atividade 2: do corpus à busca por texto](diagrams/a2_pipeline.png)
 
 - Tarefa: usar o CLIP pré-treinado para ordenar conceitos pela frequência no corpus ADS-16 e para buscar imagens a partir de uma frase.
 - Dataset: `groffo/ads16-dataset`, público no Kaggle. Modelo: `openai/clip-vit-base-patch32`, sem ajuste de pesos e sem uso de rótulos do ADS-16.
@@ -66,7 +66,7 @@
 - A escolha veio de olhar 8 imagens sorteadas logo abaixo e 8 logo acima de três candidatos: 0,3, 0,5 e 0,7. Nos 8 exemplos de cada lado vistos no notebook, perto de 0,3 os erros são comuns e perto de 0,7 a maioria dos rótulos combina.
 - Em 0,5 a maioria combina. Acima da linha, os erros vistos são uma chave como "a car" e uma maquete de castelo como "a house". Logo abaixo há rótulos certos que a regra descarta, como um macaco em "an animal" com 0,46.
 
-![Imagens sorteadas abaixo (linha de cima) e acima (linha de baixo) de 0,5](figures/a2_threshold_050.png)
+![Imagens sorteadas abaixo (linha de cima) e acima (linha de baixo) do limiar de probabilidade 0,5](figures/a2_threshold_050.png)
 
 - Decisão: 0,5, a regra de maioria. O conceito tem mais probabilidade que os outros 25 juntos. É uma escolha de julgamento, sobre uma amostra pequena avaliada por mim.
 - Custo: a parcela de imagens com algum conceito presente é 86,3% em 0,3, 62,6% em 0,5 e 40,0% em 0,7.
@@ -112,23 +112,23 @@ Frequência com limiar 0,5. "Imagens" é a contagem no corpus inteiro. Empates s
 
 Cada figura mostra as seis imagens de maior similaridade com o prompt.
 
-![1. an online advertisement with a lot of text](figures/a2_top_1.png)
+![Imagens do conceito 1: an online advertisement with a lot of text](figures/a2_top_1.png)
 
 - Confirmado: seis anúncios de busca, só com título, endereço e linhas de texto.
 
-![2. an animal](figures/a2_top_2.png)
+![Imagens do conceito 2: an animal](figures/a2_top_2.png)
 
 - Confirmado: seis animais, entre eles dois besouros, um porco e um guaxinim.
 
-![3. food](figures/a2_top_3.png)
+![Imagens do conceito 3: food](figures/a2_top_3.png)
 
 - Confirmado: seis pratos e alimentos, entre eles um peixe, um lanche com batata frita e uma pizza.
 
-![4. outdoor scenery](figures/a2_top_4.png)
+![Imagens do conceito 4: outdoor scenery](figures/a2_top_4.png)
 
 - Confirmado: seis paisagens sem pessoas, com neve, lago, montanha e floresta.
 
-![5. text and a logo](figures/a2_top_5.png)
+![Imagens do conceito 5: text and a logo](figures/a2_top_5.png)
 
 - Confirmado em parte. Três logotipos (imgur, THE 1975, eBay) e um anúncio de texto combinam.
 - A imagem de maior similaridade é um retângulo todo preto. A sexta é uma arte abstrata colorida, sem texto.
@@ -157,14 +157,14 @@ Cada figura mostra as seis imagens de maior similaridade com o prompt.
 
 ### 1. "a car"
 
-![Resultados de "a car"](figures/a2_query_01.png)
+![Imagens recuperadas pela busca "a car"](figures/a2_query_01.png)
 
 - Há carro ou referência a carro nas cinco imagens. Ele é o assunto em duas: a colagem de um carro esportivo prateado e o carro azul.
 - As outras são inesperadas: um meme com a frase "a dog driving a car", um túnel visto de dentro de um carro e um anúncio de texto com "Accessories For Car".
 
 ### 2. "a red sports car on a road"
 
-![Resultados de "a red sports car on a road"](figures/a2_query_02.png)
+![Imagens recuperadas pela busca "a red sports car on a road"](figures/a2_query_02.png)
 
 - Nenhuma imagem mostra um carro esportivo vermelho em uma estrada.
 - Cada resultado atende a um pedaço da frase: um conversível esportivo cinza, um carro amarelo em uma rua alagada, o meme do cachorro ao volante, crianças em um carrinho vermelho de brinquedo e um Mini vermelho sobre fundo preto.
@@ -172,14 +172,14 @@ Cada figura mostra as seis imagens de maior similaridade com o prompt.
 
 ### 3. "a happy family at home"
 
-![Resultados de "a happy family at home"](figures/a2_query_03.png)
+![Imagens recuperadas pela busca "a happy family at home"](figures/a2_query_03.png)
 
 - Quatro resultados são famílias alegres: um desenho 3D no sofá, uma foto sobre fundo branco, três pessoas de capacete amarelo e uma silhueta ao pôr do sol. Nenhuma foto de família é dentro de casa.
 - O segundo resultado são dois gatos no canto de uma sala. Combina com "at home". Falta a família.
 
 ### 4. "luxury"
 
-![Resultados de "luxury"](figures/a2_query_04.png)
+![Imagens recuperadas pela busca "luxury"](figures/a2_query_04.png)
 
 - Os dois primeiros resultados são carros: o conversível cinza e a colagem do carro esportivo.
 - O quinto é um anúncio de texto com "Luxury Pens" no título. A palavra escrita puxou a imagem.
@@ -187,14 +187,14 @@ Cada figura mostra as seis imagens de maior similaridade com o prompt.
 
 ### 5. "freedom"
 
-![Resultados de "freedom"](figures/a2_query_05.png)
+![Imagens recuperadas pela busca "freedom"](figures/a2_query_05.png)
 
 - O primeiro resultado é literal: uma foto em preto e branco de uma multidão sobre um muro com a palavra FREEDOM pichada.
 - Os outros são símbolos comuns de liberdade: cabelo ao vento, dois cavalos pretos correndo e uma pessoa de snowboard na neve.
 
 ### 6. "something healthy to eat"
 
-![Resultados de "something healthy to eat"](figures/a2_query_06.png)
+![Imagens recuperadas pela busca "something healthy to eat"](figures/a2_query_06.png)
 
 - Os cinco resultados combinam: um prato de frutas, cenouras, uma pirâmide alimentar e brócolis.
 - A descrição é indireta, sem citar fruta nem verdura, e o modelo a resolveu.
@@ -202,7 +202,7 @@ Cada figura mostra as seis imagens de maior similaridade com o prompt.
 
 ### 7. "technology that makes life easier"
 
-![Resultados de "technology that makes life easier"](figures/a2_query_07.png)
+![Imagens recuperadas pela busca "technology that makes life easier"](figures/a2_query_07.png)
 
 - Resultado fraco. As cinco similaridades ficam entre 0,250 e 0,254, quase empatadas.
 - Quatro têm ligação com tecnologia: um anúncio de texto de "Innovative Baby Gadgets", um anúncio do aplicativo Tinder, um disquete com braços desenhados e um ícone de computador.
@@ -210,14 +210,14 @@ Cada figura mostra as seis imagens de maior similaridade com o prompt.
 
 ### 8. "an advertisement with a lot of text"
 
-![Resultados de "an advertisement with a lot of text"](figures/a2_query_08.png)
+![Imagens recuperadas pela busca "an advertisement with a lot of text"](figures/a2_query_08.png)
 
 - Os cinco resultados são anúncios, todos da parte de anúncios do corpus.
 - Quatro têm bastante texto. O banner de hambúrguer tem só uma frase curta.
 
 ### 9. "loneliness"
 
-![Resultados de "loneliness"](figures/a2_query_09.png)
+![Imagens recuperadas pela busca "loneliness"](figures/a2_query_09.png)
 
 - O primeiro resultado é de novo texto: um cartaz com a frase "Learn to be Alone and to like it".
 - Seguem cenas vazias e escuras: um boneco pendurado, um céu estrelado com uma figura pequena e um trilho de trem na névoa.
@@ -225,7 +225,7 @@ Cada figura mostra as seis imagens de maior similaridade com o prompt.
 
 ### 10. "um cachorro brincando na praia"
 
-![Resultados de "um cachorro brincando na praia"](figures/a2_query_10.png)
+![Imagens recuperadas pela busca "um cachorro brincando na praia"](figures/a2_query_10.png)
 
 - Quatro resultados mostram cachorros. O modelo entendeu "cachorro" em português.
 - Só o terceiro tem praia: um homem, uma criança e cachorros na areia. Outros três contrariam "brincando": um cachorro magro preso a uma corrente, um com o focinho amarrado com fita e um de coleira com pontas.
@@ -233,7 +233,7 @@ Cada figura mostra as seis imagens de maior similaridade com o prompt.
 
 ### 11. "uma pessoa sorrindo"
 
-![Resultados de "uma pessoa sorrindo"](figures/a2_query_11.png)
+![Imagens recuperadas pela busca "uma pessoa sorrindo"](figures/a2_query_11.png)
 
 - Três resultados são pessoas sorrindo: uma mulher em uma varanda, um homem com restos de folha verde nos dentes e um rapaz loiro.
 - No segundo, a mulher cobre a boca com um cobertor. O quarto é um rosto branco de meme de terror, com um sorriso largo: o modelo achou o sorriso e ignorou o resto.

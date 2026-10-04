@@ -2,7 +2,7 @@
 
 ## Problema
 
-![Atividade 3: das fotos ao classificador](diagrams/a3_pipeline.png){: width="665"}
+![Atividade 3: das fotos ao classificador](diagrams/a3_pipeline.png)
 
 - Tarefa: dizer a qual de 7 classes pertence uma foto.
 - Dataset: `pavansanagapati/images-dataset`, público no Kaggle.

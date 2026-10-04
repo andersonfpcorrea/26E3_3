@@ -2,7 +2,7 @@
 
 ## O projeto analisado
 
-![Atividade 4.1: dos dados à avaliação dos três braços](diagrams/a4_pipeline.png){: width="665"}
+![Atividade 4.1: dos dados à avaliação dos três braços](diagrams/a4_pipeline.png){: width="499"}
 
 - Um grupo anterior montou um sistema de triagem de pneumonia e COVID-19 em radiografias de tórax e encerrou o projeto com resultados "promissores". O time clínico relatou que o modelo "ignora casos positivos".
 - Dados: 1.200 radiografias em três classes: Normal (840), Pneumonia (240) e COVID-19 (120). Divisão 80/20 sem estratificação.
@@ -141,7 +141,7 @@ A reprodução do projeto serve de evidência. Os números dela, todos da mesma 
 | COVID-19 | 3.570 | 120 | 96 | 24 | 300 |
 | Total | 15.099 | 1.200 | 960 | 240 | 900 |
 
-![Imagens por classe na base limpa, no conjunto do projeto e no teste real](figures/a4_class_counts.png)
+![Número de imagens por classe na base limpa, no conjunto do projeto e no teste real](figures/a4_class_counts.png)
 
 - **Conjunto do projeto:** 1.200 imagens sorteadas com a seed 42, nas quantidades do projeto que falhou.
 - **Teste real:** 300 imagens por classe, sorteadas entre as que sobraram. Nenhuma imagem está nos dois conjuntos. A base tem milhares de imagens a mais que o projeto, então a recall pode ser medida em 300 imagens de COVID-19. A validação tem 24.
@@ -190,7 +190,7 @@ A reprodução do projeto serve de evidência. Os números dela, todos da mesma 
 
 A versão 1 é o baseline: a rede e o loop descritos acima, com os batches sorteados como vêm dos dados.
 
-![Diversidade por época nas duas versões. Linha grossa: média das três seeds. Linhas finas: cada seed](figures/a4_gan_diversity.png)
+![Diversidade por época, um painel por classe, nas duas versões. Linha grossa: média das três seeds. Linhas finas: cada seed. Linha tracejada: diversidade das imagens reais](figures/a4_gan_diversity.png)
 
 - **Mode collapse no começo, em todas as seeds.** A diversidade fica entre 0,01 e 0,02 até cerca da época 50 e só passa de 0,05 entre as épocas 53 e 101, conforme a seed e a classe. Na grade de imagens, as oito imagens de cada classe são iguais nas épocas 9 e 28.
 - **Saída do colapso desigual entre classes.** Normal sobe perto da época 50 e chega ao nível das imagens reais. Pneumonia e COVID-19 sobem depois e param abaixo da linha das reais, COVID-19 mais longe.

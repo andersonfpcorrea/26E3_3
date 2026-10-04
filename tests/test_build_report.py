@@ -6,17 +6,24 @@ from pathlib import Path
 
 from PIL import Image
 from pypdf import PdfReader
+from pypdf.generic import ContentStream
 
 from build_report import (
     FULL_WIDTH,
     SINGLE_WIDTH,
     PRINT_DPI,
     build,
+    embedded_copy,
     figure_size,
     merge_sections,
     render_html,
     resolve_link,
 )
+
+
+def pixels(points):
+    """Converts a width in points to the pixels the PDF library expects in a width attribute."""
+    return round(points * 4 / 3)
 
 
 def make_report(tmp_path, image_size=None, markdown_image=None):
@@ -76,11 +83,11 @@ def test_an_explicit_width_wins_over_the_aspect_ratio_rule():
 def test_render_html_sizes_images_from_their_files(tmp_path):
     """Every image gets width and height from its file, and an explicit width in the line is honoured."""
     html = render_html(make_report(tmp_path, image_size=(1650, 600)))
-    assert f'width="{FULL_WIDTH}"' in html
+    assert f'width="{pixels(FULL_WIDTH)}"' in html
     narrow = render_html(
-        make_report(tmp_path / "b", image_size=(1650, 600), markdown_image='\n![Figura](figures/f.png){: width="200"}\n')
+        make_report(tmp_path / "b", image_size=(1650, 600), markdown_image='\n![Figura](figures/f.png){: width="150"}\n')
     )
-    assert 'width="200"' in narrow
+    assert f'width="{pixels(150)}"' in narrow
 
 
 def test_headings_stay_with_the_content_that_follows(tmp_path):
@@ -156,3 +163,93 @@ def test_photographs_are_embedded_as_jpeg_and_flat_charts_stay_png(tmp_path):
     Image.new("RGB", (3000, 1000), (10, 20, 30)).save(figure)
     (chart,) = embedded_sources(render_html(sections, build_dir=tmp_path / "b2"))
     assert chart.endswith(".png")
+
+
+def test_html_widths_are_in_pixels_so_that_points_print_correctly(tmp_path):
+    """A width attribute is read as pixels, so a point width is scaled by 4/3 in the HTML."""
+    html = render_html(make_report(tmp_path, image_size=(1080, 600)))
+    assert f'width="{pixels(SINGLE_WIDTH)}"' in html
+
+
+def image_widths_in_points(pdf_path):
+    """Returns the printed width in points of every image drawn in a PDF, read from the content stream."""
+    widths = []
+    for page in PdfReader(pdf_path).pages:
+        content = ContentStream(page.get_contents(), page.pdf)
+        scale = None
+        for operands, operator in content.operations:
+            if operator == b"cm":
+                scale = float(operands[0])
+            elif operator == b"Do" and scale:
+                widths.append(scale)
+    return widths
+
+
+def test_a_full_width_figure_fills_the_text_width_in_the_pdf(tmp_path):
+    """A wide strip prints at the text width of an A4 page with 1.7 cm margins, not at 75% of it."""
+    sections = make_report(tmp_path, image_size=(1650, 600))
+    output = tmp_path / "out.pdf"
+    build(sections, output)
+    (width,) = image_widths_in_points(output)
+    assert abs(width - FULL_WIDTH) < 3
+
+
+def test_alt_text_is_rendered_as_a_caption_after_the_image(tmp_path):
+    """Each image is followed by a caption paragraph holding its alt text."""
+    sections = make_report(
+        tmp_path, image_size=(1650, 600), markdown_image="\n![Linha grossa: média](figures/f.png)\n"
+    )
+    html = render_html(sections)
+    assert html.index("<img ") < html.index('<p class="caption">Linha grossa: média</p>')
+    output = tmp_path / "out.pdf"
+    build(sections, output)
+    text = "".join(page.extract_text() for page in PdfReader(output).pages)
+    assert "Linha grossa: média" in text
+
+
+def test_images_stay_with_their_captions(tmp_path):
+    """The image paragraph is kept with the caption that follows it."""
+    html = render_html(make_report(tmp_path, image_size=(1650, 600)))
+    assert '<p class="figure"><img ' in html
+    assert ".figure {" in html and "-pdf-keep-with-next" in html
+
+
+def test_each_top_level_heading_after_the_first_starts_a_page(tmp_path):
+    """Sections are not separated by a rule, and every h1 but the first breaks the page."""
+    sections = tmp_path / "report" / "secoes"
+    sections.mkdir(parents=True)
+    (sections / "00_a.md").write_text("# Primeira\n\ntexto\n")
+    (sections / "10_b.md").write_text("# Segunda\n\ntexto\n")
+    html = render_html(sections)
+    assert "<hr" not in html
+    assert html.count('<h1 class="new-page">') == 1
+    assert html.index("Primeira") < html.index('<h1 class="new-page">Segunda')
+    output = tmp_path / "out.pdf"
+    build(sections, output)
+    pages = [page.extract_text() for page in PdfReader(output).pages]
+    assert len(pages) == 2
+    assert "Segunda" in pages[1] and "Segunda" not in pages[0]
+
+
+def test_bold_label_paragraphs_stay_with_the_block_that_follows(tmp_path):
+    """A paragraph made only of bold text introduces a block and is kept with it."""
+    sections = tmp_path / "report" / "secoes"
+    sections.mkdir(parents=True)
+    (sections / "00_a.md").write_text("# T\n\n**Rótulo**\n\n- item\n\nTexto com **negrito** no meio.\n")
+    html = render_html(sections)
+    assert '<p class="label"><strong>Rótulo</strong></p>' in html
+    assert "<p>Texto com <strong>negrito</strong>" in html
+
+
+def test_transparent_images_are_flattened_on_white(tmp_path):
+    """A transparent image is composited on white before it is downscaled, as JPEG or PNG."""
+    source = tmp_path / "t.png"
+    Image.new("RGBA", (3000, 1000), (0, 0, 0, 0)).save(source)
+    copy = embedded_copy(str(source), 300, tmp_path / "build")
+    with Image.open(copy) as image:
+        assert image.convert("RGB").getpixel((10, 10)) == (255, 255, 255)
+    small = tmp_path / "s.png"
+    Image.new("RGBA", (100, 100), (0, 0, 0, 0)).save(small)
+    copy = embedded_copy(str(small), 300, tmp_path / "build")
+    with Image.open(copy) as image:
+        assert image.convert("RGB").getpixel((10, 10)) == (255, 255, 255)
