@@ -1,14 +1,13 @@
 from collections import Counter
 
 from dlv.data import download_kaggle_dataset
-from dlv.clip_search import count_ads16_files, list_ads16_images
+from dlv.clip_search import scan_ads16
 
 with stopwatch.measure("download"):
     dataset_root = download_kaggle_dataset(DATASET_SLUG, DATA_DIR)
 
 with stopwatch.measure("listagem"):
-    images = list_ads16_images(dataset_root)
-    removal_counts = count_ads16_files(dataset_root)
+    images, removal_counts = scan_ads16(dataset_root)
 
 image_paths = [entry["path"] for entry in images]
 sources = [entry["source"] for entry in images]

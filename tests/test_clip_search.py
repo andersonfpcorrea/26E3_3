@@ -1,11 +1,13 @@
 """Tests for the CLIP search module, using stand-in models and tiny image trees."""
 
+from ast import ImportFrom, parse, walk
 from pathlib import Path
 
 import pytest
 import torch
 from PIL import Image
 
+from dlv import clip_search
 from dlv.clip_search import (
     cached,
     concept_probabilities,
@@ -15,6 +17,7 @@ from dlv.clip_search import (
     embed_texts,
     list_ads16_images,
     rank_concepts,
+    scan_ads16,
     sample_in_band,
     search,
     similarity_matrix,
@@ -412,3 +415,23 @@ def test_sample_in_band_is_reproducible_and_capped_at_count():
 def test_sample_in_band_returns_nothing_for_an_empty_band():
     """A band with no values gives an empty list."""
     assert sample_in_band(torch.tensor([0.1, 0.9]), 0.4, 0.6, 3, seed=0) == []
+
+
+def test_scan_ads16_hashes_each_file_once_and_matches_the_two_views(tmp_path, monkeypatch):
+    """One scan gives the entries and the counts, reading every readable file once."""
+    root = make_thumbnail_archive(tmp_path)
+    calls = []
+    original = clip_search.file_digest
+    monkeypatch.setattr(clip_search, "file_digest", lambda path: calls.append(path) or original(path))
+    entries, counts = scan_ads16(root)
+    assert len(calls) == len(set(calls))
+    assert entries == list_ads16_images(root)
+    assert counts == count_ads16_files(root)
+
+
+def test_activity_two_data_cell_scans_the_archive_once():
+    """The data cell gets entries and counts from scan_ads16 and not from two separate scans."""
+    cell = Path(__file__).resolve().parent.parent / "notebooks_src" / "a2" / "05_data.py"
+    imported = {alias.name for node in walk(parse(cell.read_text())) if isinstance(node, ImportFrom) for alias in node.names}
+    assert "scan_ads16" in imported
+    assert not imported & {"list_ads16_images", "count_ads16_files"}
