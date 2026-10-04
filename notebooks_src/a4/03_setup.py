@@ -20,7 +20,7 @@ ORIGINAL_EPOCHS = 15
 ORIGINAL_BATCH_SIZE = 32
 ORIGINAL_LEARNING_RATE = 0.01
 
-GAN_EPOCHS = 240
+GAN_EPOCHS = 286
 GAN_BATCH_SIZE = 64
 GAN_BASE_CHANNELS = 32
 GAN_SEEDS = (42, 43, 44)
@@ -32,20 +32,22 @@ GAN_VERSIONS = {
         "batch_norm": True,
         "gradient_penalty_weight": 0.0,
         "augment": False,
+        "balanced_classes": False,
         "betas": (0.5, 0.999),
         "generator_lr": 2e-4,
         "discriminator_lr": 2e-4,
     },
-    "v3": {
-        "name": "Versão 3 (WGAN-GP)",
+    "v2": {
+        "name": "Versão 2 (BCE com lotes balanceados por classe)",
         "spectral_norm": False,
-        "loss": "wgan",
-        "batch_norm": False,
-        "gradient_penalty_weight": 10.0,
+        "loss": "bce",
+        "batch_norm": True,
+        "gradient_penalty_weight": 0.0,
         "augment": False,
-        "betas": (0.0, 0.9),
-        "generator_lr": 1e-4,
-        "discriminator_lr": 1e-4,
+        "balanced_classes": True,
+        "betas": (0.5, 0.999),
+        "generator_lr": 2e-4,
+        "discriminator_lr": 2e-4,
     },
 }
 EARLIER_EXECUTIONS = {
@@ -69,6 +71,33 @@ EARLIER_EXECUTIONS = {
             "v2 normalização espectral e hinge": [0.80, 0.41, 0.18],
             "v3 WGAN-GP": [0.90, 0.82, 0.91],
             "v4 BCE com aumento diferenciável": [0.82, 0.58, 0.45],
+        },
+    },
+    "previous_execution_three_seeds": {
+        "description": "Execução anterior deste notebook: baseline BCE e WGAN-GP com três seeds (42, 43, 44) e 240 épocas. Razão entre a diversidade gerada e a real na última décima parte das épocas. Não é resultado desta execução.",
+        "epochs": 240,
+        "classes": ["Normal", "Pneumonia", "COVID-19"],
+        "versions": {
+            "BCE (baseline)": {
+                "per_seed": {
+                    "42": [0.884, 0.872, 0.607],
+                    "43": [0.957, 0.682, 0.535],
+                    "44": [1.010, 0.790, 0.632],
+                },
+                "mean": [0.951, 0.782, 0.591],
+                "std": [0.063, 0.095, 0.051],
+                "collapsed_seeds": [],
+            },
+            "WGAN-GP": {
+                "per_seed": {
+                    "42": [0.788, 0.696, 0.736],
+                    "43": [0.060, 0.080, 0.061],
+                    "44": [0.900, 0.767, 0.659],
+                },
+                "mean": [0.583, 0.514, 0.485],
+                "std": [0.456, 0.378, 0.370],
+                "collapsed_seeds": [43],
+            },
         },
     },
 }
