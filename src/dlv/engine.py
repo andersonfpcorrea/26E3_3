@@ -1,9 +1,12 @@
 """Training loop and evaluation for image classifiers."""
 
+from math import cos, pi
+
 import torch
 from torch import nn
 from torch.amp import GradScaler, autocast
 from torch.nn.functional import cross_entropy
+from torch.optim.lr_scheduler import LambdaLR
 
 
 def train_all(model: nn.Module) -> None:
@@ -148,3 +151,39 @@ def mean_class_distance(confusion: list[list[int]]) -> float:
         for prediction, count in enumerate(row)
     )
     return distance / max(total, 1)
+
+
+def within_distance_accuracy(confusion: list[list[int]], distance: int = 1) -> float:
+    """Returns the share of samples predicted at most ``distance`` classes from the truth.
+
+    Rows are true classes and columns are predicted classes, in an order that
+    has meaning, such as periods in time. An empty matrix gives zero.
+    """
+    total = sum(sum(row) for row in confusion)
+    near = sum(
+        count
+        for truth, row in enumerate(confusion)
+        for prediction, count in enumerate(row)
+        if abs(truth - prediction) <= distance
+    )
+    return near / max(total, 1)
+
+
+def warmup_cosine_schedule(optimizer, warmup_steps: int, total_steps: int) -> LambdaLR:
+    """Schedules a linear warm-up followed by a cosine decay, counted in steps.
+
+    The rate of every parameter group rises in equal steps to its base value
+    over ``warmup_steps``, then falls along half a cosine and reaches zero at
+    ``total_steps``. Steps past the total keep the rate at zero. The scheduler
+    is meant to be stepped once per training batch, as ``fit`` does.
+    """
+    decay_steps = max(total_steps - warmup_steps, 1)
+
+    def factor(step: int) -> float:
+        """Returns the multiplier of the base rate at one step."""
+        if step < warmup_steps:
+            return (step + 1) / warmup_steps
+        progress = min((step - warmup_steps) / decay_steps, 1.0)
+        return 0.5 * (1 + cos(pi * progress))
+
+    return LambdaLR(optimizer, factor)

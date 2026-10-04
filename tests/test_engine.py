@@ -7,7 +7,15 @@ from torch.utils.data import DataLoader, TensorDataset
 import pytest
 
 from dlv import engine
-from dlv.engine import evaluate, fit, macro_f1, mean_class_distance, run_epoch
+from dlv.engine import (
+    evaluate,
+    fit,
+    macro_f1,
+    mean_class_distance,
+    run_epoch,
+    warmup_cosine_schedule,
+    within_distance_accuracy,
+)
 
 
 def separable_loader():
@@ -184,3 +192,71 @@ def test_fit_shares_one_gradient_scaler_across_epochs(monkeypatch):
     assert len(seen) == 3
     assert seen[0] is not None
     assert seen[0] is seen[1] is seen[2]
+
+
+def learning_rates(warmup_steps, total_steps, base=1.0):
+    """Returns the learning rate used at every step of a warm-up cosine schedule."""
+    optimizer = torch.optim.SGD([nn.Parameter(torch.zeros(1))], lr=base)
+    scheduler = warmup_cosine_schedule(optimizer, warmup_steps, total_steps)
+    rates = []
+    for _ in range(total_steps):
+        rates.append(optimizer.param_groups[0]["lr"])
+        optimizer.step()
+        scheduler.step()
+    return rates
+
+
+def test_warmup_cosine_schedule_rises_linearly_then_decays_to_near_zero():
+    """The rate climbs in equal steps to the base value, then follows a cosine down."""
+    rates = learning_rates(warmup_steps=4, total_steps=12)
+    assert rates[:4] == pytest.approx([0.25, 0.5, 0.75, 1.0])
+    assert rates[4] == pytest.approx(1.0)
+    assert rates[8] == pytest.approx(0.5)
+    assert all(later < earlier for earlier, later in zip(rates[4:], rates[5:]))
+    assert 0 < rates[-1] < 0.1
+
+
+def test_warmup_cosine_schedule_scales_each_parameter_group():
+    """Groups with different base rates keep their ratio along the schedule."""
+    optimizer = torch.optim.SGD(
+        [
+            {"params": [nn.Parameter(torch.zeros(1))], "lr": 1.0},
+            {"params": [nn.Parameter(torch.zeros(1))], "lr": 0.1},
+        ]
+    )
+    scheduler = warmup_cosine_schedule(optimizer, warmup_steps=2, total_steps=6)
+    for _ in range(4):
+        optimizer.step()
+        scheduler.step()
+        first, second = (group["lr"] for group in optimizer.param_groups)
+        assert second == pytest.approx(first / 10)
+
+
+def test_warmup_cosine_schedule_without_warmup_starts_at_the_base_rate():
+    """Zero warm-up steps give a plain cosine decay."""
+    rates = learning_rates(warmup_steps=0, total_steps=4)
+    assert rates[0] == pytest.approx(1.0)
+    assert rates[2] == pytest.approx(0.5)
+
+
+def test_warmup_cosine_schedule_stays_at_zero_or_above_past_the_end():
+    """Stepping past the planned total never gives a negative or rising rate."""
+    optimizer = torch.optim.SGD([nn.Parameter(torch.zeros(1))], lr=1.0)
+    scheduler = warmup_cosine_schedule(optimizer, warmup_steps=1, total_steps=3)
+    for _ in range(6):
+        optimizer.step()
+        scheduler.step()
+    assert optimizer.param_groups[0]["lr"] == pytest.approx(0.0)
+
+
+def test_within_distance_accuracy_counts_neighbouring_classes_as_hits():
+    """Predictions at most one class away from the truth count as correct."""
+    confusion = [[2, 1, 1], [0, 3, 0], [2, 1, 0]]
+    assert within_distance_accuracy(confusion) == pytest.approx(7 / 10)
+    assert within_distance_accuracy(confusion, distance=0) == pytest.approx(5 / 10)
+    assert within_distance_accuracy(confusion, distance=2) == pytest.approx(1.0)
+
+
+def test_within_distance_accuracy_of_an_empty_matrix_is_zero():
+    """A matrix with no samples gives zero instead of dividing by zero."""
+    assert within_distance_accuracy([[0, 0], [0, 0]]) == 0.0
