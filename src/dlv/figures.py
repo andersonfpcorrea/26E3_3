@@ -1,6 +1,7 @@
 """Plots used by the notebooks and the report. Labels are in Portuguese."""
 
 from pathlib import Path
+from textwrap import fill
 
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
@@ -332,8 +333,8 @@ def plot_gan_snapshots(snapshots: dict[int, Tensor], path: Path, title: str) -> 
         axis.imshow(snapshots[epoch][0].numpy(), cmap="gray", vmin=0, vmax=255)
         axis.set_title(f"Época {epoch}", fontsize=9)
         axis.axis("off")
-    figure.suptitle(title, fontsize=10)
-    figure.tight_layout()
+    figure.suptitle(fill(title, 80), fontsize=9)
+    figure.tight_layout(rect=(0, 0, 1, 0.97))
     figure.savefig(path, dpi=150)
     return figure
 
