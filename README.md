@@ -69,6 +69,19 @@ Os notebooks de `notebooks/` são gerados a partir de `notebooks_src/` e de `src
 
 ## Como abrir um notebook no Colab
 
+Cada link abre o notebook direto no Colab, sem baixar nada:
+
+| Atividade | Notebook |
+| --- | --- |
+| 1. Vision Transformers | [A1_vision_transformers.ipynb](https://colab.research.google.com/github/andersonfpcorrea/26E3_3/blob/master/notebooks/A1_vision_transformers.ipynb) |
+| 2. CLIP no ADS-16 | [A2_clip_ads16.ipynb](https://colab.research.google.com/github/andersonfpcorrea/26E3_3/blob/master/notebooks/A2_clip_ads16.ipynb) |
+| 3. CNN pré-treinada | [A3_cnn_kaggle.ipynb](https://colab.research.google.com/github/andersonfpcorrea/26E3_3/blob/master/notebooks/A3_cnn_kaggle.ipynb) |
+| 4.1. Raio-X e GAN | [A4_estudo_caso_raio_x.ipynb](https://colab.research.google.com/github/andersonfpcorrea/26E3_3/blob/master/notebooks/A4_estudo_caso_raio_x.ipynb) |
+
+Depois de abrir: em Ambiente de execução, Alterar o tipo de ambiente de execução, escolha a GPU T4; depois, Executar tudo.
+
+Sem os links, pelo arquivo de entrega:
+
 1. Abra https://colab.research.google.com e escolha Arquivo, Fazer upload de notebook.
 2. Envie um arquivo de `notebooks/` (ou de `build/notebooks/`, depois de `make notebooks`).
 3. Em Ambiente de execução, Alterar o tipo de ambiente de execução, escolha a GPU T4.
