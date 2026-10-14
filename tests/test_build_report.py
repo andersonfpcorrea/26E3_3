@@ -4,6 +4,7 @@ import logging
 import re
 from pathlib import Path
 
+from markdown import markdown
 from PIL import Image
 from pypdf import PdfReader
 from pypdf.generic import ContentStream
@@ -16,6 +17,7 @@ from build_report import (
     embedded_copy,
     figure_size,
     merge_sections,
+    normalise_list_indent,
     render_html,
     resolve_link,
 )
@@ -253,3 +255,41 @@ def test_transparent_images_are_flattened_on_white(tmp_path):
     copy = embedded_copy(str(small), 300, tmp_path / "build")
     with Image.open(copy) as image:
         assert image.convert("RGB").getpixel((10, 10)) == (255, 255, 255)
+
+
+def test_two_space_nested_bullets_are_rendered_as_nested_lists():
+    """Nested bullets indented by two spaces, as Prettier writes them, still nest in the HTML."""
+    html = markdown(normalise_list_indent("- a\n  - nested\n- b\n"), extensions=["sane_lists"])
+    assert "<li>a<ul>\n<li>nested</li>" in html
+
+
+def test_three_space_nested_items_under_numbered_items_are_rendered_as_nested_lists():
+    """Items indented by three spaces under a numbered item nest in the HTML."""
+    html = markdown(normalise_list_indent("1. a\n   - nested\n2. b\n"), extensions=["sane_lists"])
+    assert "<li>a<ul>\n<li>nested</li>" in html
+
+
+def test_two_space_indentation_scales_every_level_of_a_list():
+    """A second nesting level written with four spaces in a two-space list becomes eight spaces."""
+    source = "- a\n  - b\n    - c\n"
+    assert normalise_list_indent(source) == "- a\n    - b\n        - c\n"
+
+
+def test_four_space_lists_are_left_unchanged():
+    """Lists already indented by four spaces are returned exactly as given."""
+    source = "- a\n    - nested\n- b\n\nTexto.\n"
+    assert normalise_list_indent(source) == source
+
+
+def test_fenced_code_keeps_its_indentation():
+    """Lines inside a fenced code block are never re-indented."""
+    source = "- a\n  - b\n\n```\n  - not a list\n```\n"
+    assert normalise_list_indent(source).endswith("```\n  - not a list\n```\n")
+
+
+def test_rendered_report_nests_two_space_bullets(tmp_path):
+    """The report renderer applies the indentation fix to the merged sections."""
+    (tmp_path / "secoes").mkdir()
+    (tmp_path / "secoes" / "00_a.md").write_text("# T\n\n- a\n  - nested\n", encoding="utf-8")
+    html = render_html(tmp_path / "secoes", tmp_path / "build")
+    assert "<li>a<ul>" in html

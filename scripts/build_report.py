@@ -181,6 +181,65 @@ def mark_page_breaks_and_labels(html: str) -> str:
     return re.sub(r"<p>(<strong>(?:(?!</strong>).)*</strong>)</p>", r'<p class="label">\1</p>', html)
 
 
+LIST_MARKER = re.compile(r"^( *)([-*+]|\d+[.)])\s")
+
+
+def rescale_block(block: list[str]) -> list[str]:
+    """Rewrites the indentation of one list block to steps of four spaces.
+
+    The step the block uses is the smallest indentation of its nested markers.
+    Blocks already written with a step of four or more are returned unchanged.
+    """
+    indents = [
+        len(match.group(1))
+        for match in (LIST_MARKER.match(line) for line in block)
+        if match and match.group(1)
+    ]
+    step = min(indents) if indents else 4
+    if step >= 4:
+        return block
+    rescaled = []
+    for line in block:
+        stripped = line.lstrip(" ")
+        width = len(line) - len(stripped)
+        rescaled.append(" " * (round(width / step) * 4) + stripped if stripped else line)
+    return rescaled
+
+
+def normalise_list_indent(text: str) -> str:
+    """Makes nested lists indented by two or three spaces nest in the PDF.
+
+    Python-Markdown nests a list item only when it is indented by four spaces,
+    while editors such as Prettier write two (or three under a numbered item).
+    Each list block, from a top-level marker to the next line that starts at
+    column zero and is not a marker, is rescaled on its own. Fenced code is
+    left untouched.
+    """
+    output: list[str] = []
+    block: list[str] = []
+    in_fence = False
+    for line in text.split("\n"):
+        if line.lstrip().startswith("```"):
+            in_fence = not in_fence
+            output.extend(rescale_block(block))
+            block = []
+            output.append(line)
+            continue
+        if in_fence:
+            output.append(line)
+            continue
+        starts_block = LIST_MARKER.match(line) is not None and not line.startswith(" ")
+        continues_block = block and (not line.strip() or line.startswith(" "))
+        if starts_block or continues_block:
+            block.append(line)
+            continue
+        output.extend(rescale_block(block))
+        block = []
+        output.append(line)
+    output.extend(rescale_block(block))
+    return "\n".join(output)
+
+
 def merge_sections(sections_dir: Path) -> str:
     """Joins every Markdown section in filename order."""
     parts = [
@@ -204,7 +263,7 @@ def render_html(sections_dir: Path, build_dir: Path | None = None) -> str:
     sections_dir = Path(sections_dir)
     build_dir = Path(build_dir) if build_dir else default_build_dir(sections_dir)
     body = markdown(
-        merge_sections(sections_dir),
+        normalise_list_indent(merge_sections(sections_dir)),
         extensions=["tables", "fenced_code", "sane_lists", "attr_list"],
     )
     body = body.replace("<table>", '<table cellspacing="0">')
