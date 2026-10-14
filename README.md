@@ -2,7 +2,7 @@
 
 **Aluno:** Anderson Corrêa
 
-Projeto da disciplina de Visão Computacional, em PyTorch. São quatro atividades:
+Projeto da disciplina de Visão Computacional, em PyTorch, com quatro atividades:
 
 1. Datação de pinturas do WikiArt em 8 períodos, com Vision Transformers.
 2. Busca e ranking de conceitos em anúncios com CLIP.
@@ -35,37 +35,37 @@ make help             # lista os comandos
 
 ## Entregáveis
 
-| Entregável do enunciado | Onde está |
-| --- | --- |
-| Notebook A1 | `notebooks/A1_vision_transformers.ipynb` |
-| Notebook A2 | `notebooks/A2_clip_ads16.ipynb` |
-| Notebook A3 | `notebooks/A3_cnn_kaggle.ipynb` |
-| Notebook A4.1 | `notebooks/A4_estudo_caso_raio_x.ipynb` |
-| Relatório técnico (PDF) | `report/anderson_correa_deep-learning-and-vision_computer-vision.pdf` |
-| Fonte do relatório | `report/secoes/*.md` |
-| A4.2 (tráfego, só texto) | `report/secoes/45_atividade4_trafego.md` |
-| Uso de IA e referências | `report/secoes/90_uso_de_ia_e_referencias.md` |
-| Métricas das execuções | `results/a1.json` a `results/a4.json` |
-| Arquivo de entrega | `entrega/anderson_correa_computer-vision_pd.zip`, gerado por `make zip` |
-| Dependências com versões | `pyproject.toml` e `uv.lock` |
+| Entregável do enunciado  | Onde está                                                               |
+| ------------------------ | ----------------------------------------------------------------------- |
+| Notebook A1              | `notebooks/A1_vision_transformers.ipynb`                                |
+| Notebook A2              | `notebooks/A2_clip_ads16.ipynb`                                         |
+| Notebook A3              | `notebooks/A3_cnn_kaggle.ipynb`                                         |
+| Notebook A4.1            | `notebooks/A4_estudo_caso_raio_x.ipynb`                                 |
+| Relatório técnico (PDF)  | `report/anderson_correa_deep-learning-and-vision_computer-vision.pdf`   |
+| Fonte do relatório       | `report/secoes/*.md`                                                    |
+| A4.2 (tráfego, só texto) | `report/secoes/45_atividade4_trafego.md`                                |
+| Uso de IA e referências  | `report/secoes/90_uso_de_ia_e_referencias.md`                           |
+| Métricas das execuções   | `results/a1.json` a `results/a4.json`                                   |
+| Arquivo de entrega       | `entrega/anderson_correa_computer-vision_pd.zip`, gerado por `make zip` |
+| Dependências com versões | `pyproject.toml` e `uv.lock`                                            |
 
 ## Estrutura
 
 ```
-src/dlv/            pacote com toda a lógica: dados, modelos, treino, figuras
-notebooks_src/      células de cada notebook (a1 a a4), configuração, chamadas, prints e funções curtas de orquestração
+src/dlv/            dados, modelos, treino, figuras
+notebooks_src/      células de cada notebook (a1 a a4), configuração, prints, funções
 scripts/            build_notebooks.py, colab_run.py, build_report.py
 notebooks/          notebooks executados no Colab
 results/            métricas em JSON, base dos números do relatório
 report/             secoes/*.md, figures/*.png, diagrams/ e o PDF final
-tests/              testes na CPU, sem baixar dados nem pesos
+tests/              testes em CPU, sem baixar dados nem pesos
 build/              arquivos gerados (ignorado pelo git)
 entrega/            arquivo zip de entrega (ignorado pelo git)
 ```
 
-## Os notebooks são gerados
+## notebooks
 
-Os notebooks de `notebooks/` são gerados a partir de `notebooks_src/` e de `src/dlv/`. Não edite um notebook à mão. Para mudar algo, edite a célula em `notebooks_src/` ou o módulo em `src/dlv/` e rode `make notebooks`. Cada notebook sai autocontido: o código do pacote vai dentro dele, então ele roda no Colab sem clonar o repositório.
+Os notebooks de `notebooks/` são gerados a partir de `notebooks_src/` e de `src/dlv/`. Cada notebook é autocontido: o código do pacote lhe é incluso, sendo rodado no Colab sem clonar o repositório.
 
 ## Como abrir um notebook no Colab
 
@@ -73,5 +73,3 @@ Os notebooks de `notebooks/` são gerados a partir de `notebooks_src/` e de `src
 2. Envie um arquivo de `notebooks/` (ou de `build/notebooks/`, depois de `make notebooks`).
 3. Em Ambiente de execução, Alterar o tipo de ambiente de execução, escolha a GPU T4.
 4. Em Ambiente de execução, escolha Executar tudo.
-
-Os requisitos de memória e o tempo estimado estão no início de cada notebook. Os dados são baixados dentro do notebook.
