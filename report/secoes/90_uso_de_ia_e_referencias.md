@@ -2,34 +2,30 @@
 
 ## Uso de IA
 
-O enunciado marca este trabalho como "Sinal Verde". Todas as fontes, incluindo ferramentas de IA, devem ser citadas. O resultado de uma IA pode ser tendencioso e impreciso, e o aluno responde pela exatidão do que usa. Esta seção cumpre essa regra.
-
 **Ferramenta**
 
-- Claude Code, da Anthropic. É um assistente de programação que roda no terminal.
+- Claude, Gemini.
 
 **Para que foi usada**
 
 - Planejar o projeto: dividir o trabalho em tarefas e definir a ordem de execução.
 - Escrever e revisar o código do pacote `src/dlv`, dos scripts e dos testes.
 - Rodar os experimentos no Google Colab, em uma GPU T4.
-- Redigir e revisar o texto do relatório.
 
 **Como o resultado foi conferido**
 
 - Testes automáticos. O repositório tem 394 testes, que rodam na CPU com entradas pequenas.
 - Revisão independente. Cada tarefa passou por uma revisão independente antes de ser aceita.
 - Números do relatório. Cada número foi comparado com os arquivos de resultado em `results/`, gerados pelas execuções dos notebooks.
-- Figuras. Eu olhei as figuras e as páginas do PDF para achar cortes, sobreposições e rótulos ilegíveis.
 - Problemas de dados achados e corrigidos no caminho:
-    - Atividade 3: o download trazia as imagens duplicadas, e as cópias foram removidas antes da divisão.
-    - Atividade 2: as miniaturas contavam a mesma figura duas vezes, e foram removidas.
-    - Atividade 4: as máscaras de pulmão que acompanham as radiografias nunca são lidas, e o primeiro resultado da GAN não se repetia entre seeds, o que levou ao estudo de instabilidade.
+  - Atividade 3: o download trazia as imagens duplicadas, e as cópias foram removidas antes da divisão.
+  - Atividade 2: as miniaturas contavam a mesma figura duas vezes, e foram removidas.
+  - Atividade 4: as máscaras de pulmão que acompanham as radiografias nunca são lidas, e o primeiro resultado da GAN não se repetia entre seeds, o que levou ao estudo de instabilidade.
 - Resultados fracos foram escritos como saíram. Hiperparâmetros não foram ajustados para chegar a uma meta.
 
 **Responsabilidade**
 
-- Eu, Anderson Corrêa, revisei o trabalho e respondo por ele. As conclusões do relatório são minhas, e os erros que restarem também.
+As conclusões do relatório são minhas, e os erros que restarem também.
 
 ## Referências
 
@@ -39,8 +35,8 @@ O enunciado marca este trabalho como "Sinal Verde". Todas as fontes, incluindo f
 - ADS-16 Computational Advertising Dataset, de Giorgio Roffo (`groffo/ads16-dataset`). Página: https://www.kaggle.com/datasets/groffo/ads16-dataset. Licença na página: "Other (specified in description)". A descrição pede a citação de Roffo, G. e Vinciarelli, A. (2016), "Personality in computational advertising: A benchmark", 4th Workshop on Emotions and Personality in Personalized Systems (EMPIRE) 2016.
 - Images Dataset, de Pavan Sanagapati (`pavansanagapati/images-dataset`). Página: https://www.kaggle.com/datasets/pavansanagapati/images-dataset. Licença na página: "CC0: Public Domain".
 - COVID-19 Radiography Database, de Tawsifur Rahman (`tawsifurrahman/covid19-radiography-database`). Página: https://www.kaggle.com/datasets/tawsifurrahman/covid19-radiography-database. Licença na página: "Data files © Original Authors". A página pede a citação de dois artigos:
-    - M.E.H. Chowdhury, T. Rahman, A. Khandakar, R. Mazhar, M.A. Kadir, Z.B. Mahbub, K.R. Islam, M.S. Khan, A. Iqbal, N. Al-Emadi, M.B.I. Reaz, M. T. Islam, “Can AI help in screening Viral and COVID-19 pneumonia?” IEEE Access, Vol. 8, 2020, pp. 132665 - 132676. https://ieeexplore.ieee.org/document/9144185
-    - Rahman, T., Khandakar, A., Qiblawey, Y., Tahir, A., Kiranyaz, S., Kashem, S.B.A., Islam, M.T., Maadeed, S.A., Zughaier, S.M., Khan, M.S. and Chowdhury, M.E., 2020. Exploring the Effect of Image Enhancement Techniques on COVID-19 Detection using Chest X-ray Images. https://doi.org/10.1016/j.compbiomed.2021.104319
+  - M.E.H. Chowdhury, T. Rahman, A. Khandakar, R. Mazhar, M.A. Kadir, Z.B. Mahbub, K.R. Islam, M.S. Khan, A. Iqbal, N. Al-Emadi, M.B.I. Reaz, M. T. Islam, “Can AI help in screening Viral and COVID-19 pneumonia?” IEEE Access, Vol. 8, 2020, pp. 132665 - 132676. https://ieeexplore.ieee.org/document/9144185
+  - Rahman, T., Khandakar, A., Qiblawey, Y., Tahir, A., Kiranyaz, S., Kashem, S.B.A., Islam, M.T., Maadeed, S.A., Zughaier, S.M., Khan, M.S. and Chowdhury, M.E., 2020. Exploring the Effect of Image Enhancement Techniques on COVID-19 Detection using Chest X-ray Images. https://doi.org/10.1016/j.compbiomed.2021.104319
 
 ### Modelos e pesos pré-treinados
 

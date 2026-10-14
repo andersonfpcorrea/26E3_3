@@ -20,24 +20,24 @@
 
 **Imagens distintas por classe**
 
-| Classe | Imagens |
-| --- | --- |
-| bike | 364 |
-| cars | 420 |
-| cats | 202 |
-| dogs | 202 |
-| flowers | 210 |
-| horses | 183 |
-| human | 183 |
-| Total | 1.764 |
+| Classe  | Imagens |
+| ------- | ------- |
+| bike    | 364     |
+| cars    | 420     |
+| cats    | 202     |
+| dogs    | 202     |
+| flowers | 210     |
+| horses  | 183     |
+| human   | 183     |
+| Total   | 1.764   |
 
 **Divisão estratificada, seed 42**
 
-| Conjunto | Imagens | Parte |
-| --- | --- | --- |
-| Treino | 1.234 | 70% |
-| Validação | 265 | 15% |
-| Teste | 265 | 15% |
+| Conjunto  | Imagens | Parte |
+| --------- | ------- | ----- |
+| Treino    | 1.234   | 70%   |
+| Validação | 265     | 15%   |
+| Teste     | 265     | 15%   |
 
 ## Decisões técnicas
 
@@ -55,8 +55,8 @@
 - A ImageNet já contém fotos muito parecidas com as deste dataset: várias raças de cães e de gatos, tipos de carro, bicicletas, cavalos e flores. Pessoas aparecem em muitas fotos da ImageNet, embora ela não tenha uma classe "pessoa".
 - Com 7 classes de objetos do dia a dia, um modelo maior não teria erro de teste para corrigir. A validação errou 2 imagens em 265.
 - Comparação com a EfficientNet-B0, segundo a documentação do torchvision:
-    - A EfficientNet-B0 é menor: cerca de 5,3 milhões de parâmetros e 1.280 features, com 77,7% de acurácia top-1 na ImageNet.
-    - A ResNet-50 com `IMAGENET1K_V2` tem 80,9% de top-1. Como a memória e o tempo ficaram longe do limite da T4, a economia da EfficientNet-B0 não faria diferença aqui. Ela seria a escolha se o limite fosse memória ou tempo.
+  - A EfficientNet-B0 é menor: cerca de 5,3 milhões de parâmetros e 1.280 features, com 77,7% de acurácia top-1 na ImageNet.
+  - A ResNet-50 com `IMAGENET1K_V2` tem 80,9% de top-1. Como a memória e o tempo ficaram longe do limite da T4, a economia da EfficientNet-B0 não faria diferença aqui. Ela seria a escolha se o limite fosse memória ou tempo.
 
 ### Por que feature extraction
 
@@ -82,27 +82,27 @@
 
 **Acurácia por classe no teste**
 
-| Classe | Imagens no teste | Acertos | Acurácia | Queda com 1 erro |
-| --- | --- | --- | --- | --- |
-| bike | 54 | 54 | 100% | 1,85 ponto |
-| cars | 63 | 63 | 100% | 1,59 ponto |
-| cats | 30 | 30 | 100% | 3,33 pontos |
-| dogs | 31 | 31 | 100% | 3,23 pontos |
-| flowers | 32 | 32 | 100% | 3,13 pontos |
-| horses | 28 | 28 | 100% | 3,57 pontos |
-| human | 27 | 27 | 100% | 3,70 pontos |
-| Global | 265 | 265 | 100% | 0,38 ponto |
+| Classe  | Imagens no teste | Acertos | Acurácia | Queda com 1 erro |
+| ------- | ---------------- | ------- | -------- | ---------------- |
+| bike    | 54               | 54      | 100%     | 1,85 ponto       |
+| cars    | 63               | 63      | 100%     | 1,59 ponto       |
+| cats    | 30               | 30      | 100%     | 3,33 pontos      |
+| dogs    | 31               | 31      | 100%     | 3,23 pontos      |
+| flowers | 32               | 32      | 100%     | 3,13 pontos      |
+| horses  | 28               | 28      | 100%     | 3,57 pontos      |
+| human   | 27               | 27      | 100%     | 3,70 pontos      |
+| Global  | 265              | 265     | 100%     | 0,38 ponto       |
 
 - A última coluna mostra quantos pontos percentuais a acurácia perderia com um único erro.
 
 **Curvas de treino**
 
 | Época | Perda treino | Perda validação | Acurácia treino | Acurácia validação |
-| --- | --- | --- | --- | --- |
-| 1 | 0,824 | 0,277 | 87,84% | 99,62% |
-| 2 | 0,180 | 0,132 | 99,43% | 99,25% |
-| 5 | 0,049 | 0,056 | 99,84% | 99,25% |
-| 10 | 0,018 | 0,031 | 99,92% | 99,25% |
+| ----- | ------------ | --------------- | --------------- | ------------------ |
+| 1     | 0,824        | 0,277           | 87,84%          | 99,62%             |
+| 2     | 0,180        | 0,132           | 99,43%          | 99,25%             |
+| 5     | 0,049        | 0,056           | 99,84%          | 99,25%             |
+| 10    | 0,018        | 0,031           | 99,92%          | 99,25%             |
 
 - A acurácia de validação estabiliza na época 2, em 99,25% (263 de 265), e fica igual até a época 10.
 - Na época 1 a validação acertou 264 de 265 (99,62%). Da época 2 em diante, 263.
@@ -130,10 +130,10 @@
 - As 7 classes são bem diferentes entre si e quase todas têm classes parecidas na ImageNet.
 - O backbone já separa esses objetos antes de qualquer treino. A camada nova só precisa aprender a qual das 7 saídas cada grupo de features pertence. Isso explica a validação acima de 99% já na primeira época.
 - As classes também diferem no tipo de foto:
-    - bike e cars são fotos de rua, quase todas com 640x480 pixels, em BMP.
-    - flowers são closes de 128x128 pixels, em PNG, com a flor ocupando o quadro inteiro.
-    - cats e dogs são fotos caseiras e de abrigo, em JPG.
-    - horses e human são imagens pequenas da internet, em JPG. Em horses há desenhos e imagens geradas por computador. Em human, as pessoas usam roupa de equitação e muitas aparecem ao lado de um cavalo.
+  - bike e cars são fotos de rua, quase todas com 640x480 pixels, em BMP.
+  - flowers são closes de 128x128 pixels, em PNG, com a flor ocupando o quadro inteiro.
+  - cats e dogs são fotos caseiras e de abrigo, em JPG.
+  - horses e human são imagens pequenas da internet, em JPG. Em horses há desenhos e imagens geradas por computador. Em human, as pessoas usam roupa de equitação e muitas aparecem ao lado de um cavalo.
 - Risco que isso traz: a classe anda junto com o formato e a resolução do arquivo. Uma flor de 128 pixels ampliada para 232 fica borrada. Uma foto de rua reduzida fica nítida. O modelo pode usar essa diferença como atalho. Esse efeito não foi medido.
 
 **O primeiro resultado foi descartado**
@@ -161,8 +161,8 @@
 ### Geometric augmentation
 
 - **Flip horizontal: seguro para as 7 classes.** Nenhuma classe depende de esquerda ou direita.
-    - Ajuda mais em bike, cars e horses, que aparecem muito de perfil, virados para um lado ou para o outro.
-    - Em human, algumas fotos têm marca d'água com texto. O texto fica espelhado, mas ele não define a classe.
+  - Ajuda mais em bike, cars e horses, que aparecem muito de perfil, virados para um lado ou para o outro.
+  - Em human, algumas fotos têm marca d'água com texto. O texto fica espelhado, mas ele não define a classe.
 - **Rotação pequena, até 15 graus: ajuda cats e dogs.** Os animais aparecem deitados, no colo e em ângulos variados, e a câmera é de mão.
 - **Rotação livre e flip vertical: só para flowers.** As flores são fotografadas de cima e de perto, sem um "lado de cima" definido.
 - **Flip vertical e rotação grande distorcem bike, cars, horses e human.** Nessas fotos o chão está sempre embaixo, e as pessoas de human estão de pé. Uma rua de cabeça para baixo não existe no uso real.
@@ -178,8 +178,8 @@
 ### Scale variation
 
 - Estado atual: o recorte central corta as bordas.
-    - Em uma foto de 640x480 (bike e cars), o recorte de 224x224 mantém 72% da largura.
-    - Em um retrato de human de 183x275, mantém 64% da altura. Cabeça e botas podem ficar de fora.
+  - Em uma foto de 640x480 (bike e cars), o recorte de 224x224 mantém 72% da largura.
+  - Em um retrato de human de 183x275, mantém 64% da altura. Cabeça e botas podem ficar de fora.
 - **Recorte aleatório com mudança de escala (RandomResizedCrop): seguro para flowers.** A flor ocupa o quadro inteiro. Qualquer recorte ainda mostra pétalas.
 - **Ajuda cats e dogs com recortes moderados.** O animal ocupa boa parte da foto, e a distância da câmera varia bastante.
 - **Recorte agressivo prejudica cars e bike.** Em muitas fotos de cars, o carro é pequeno e está longe, em uma rua larga. Um recorte pequeno pode pegar só asfalto, prédio ou árvore, com o rótulo "cars". Como bike e cars têm o mesmo tipo de rua ao fundo, um recorte sem o objeto fica ambíguo entre as duas classes.
@@ -197,10 +197,10 @@
 
 **Regra de decisão: tamanho do dataset contra distância do domínio em relação à ImageNet**
 
-| | Domínio próximo da ImageNet | Domínio distante da ImageNet |
-| --- | --- | --- |
-| **Dataset pequeno** | Feature extraction. Backbone congelado, treina só a classification head. | Caso mais difícil. Fine-tuning só dos últimos blocos, com taxa de aprendizado baixa e augmentation forte. |
-| **Dataset grande** | Fine-tuning da rede inteira, com taxa de aprendizado baixa. As features já são boas e os dados permitem refinar. | Fine-tuning da rede inteira. Os pesos pré-treinados servem como ponto de partida. |
+|                     | Domínio próximo da ImageNet                                                                                      | Domínio distante da ImageNet                                                                              |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| **Dataset pequeno** | Feature extraction. Backbone congelado, treina só a classification head.                                         | Caso mais difícil. Fine-tuning só dos últimos blocos, com taxa de aprendizado baixa e augmentation forte. |
+| **Dataset grande**  | Fine-tuning da rede inteira, com taxa de aprendizado baixa. As features já são boas e os dados permitem refinar. | Fine-tuning da rede inteira. Os pesos pré-treinados servem como ponto de partida.                         |
 
 - **Feature extraction** serve quando as features prontas já separam as classes e há poucos dados. Poucos parâmetros treinam, então o risco de overfitting é baixo e o treino é rápido.
 - **Fine-tuning** serve quando as features prontas não bastam. Isso acontece quando o domínio é diferente (raio-X, imagem de satélite, microscopia) ou quando as classes são muito parecidas entre si. Ele exige mais dados, porque milhões de pesos passam a treinar.

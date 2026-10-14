@@ -23,14 +23,14 @@
 
 A reprodução do projeto serve de evidência. Os números dela, todos da mesma execução:
 
-| Medida | Valor |
-| --- | --- |
-| Acurácia de treino na última época | 100% |
-| Acurácia de validação na última época | 89,2% (214 de 240) |
+| Medida                                                      | Valor              |
+| ----------------------------------------------------------- | ------------------ |
+| Acurácia de treino na última época                          | 100%               |
+| Acurácia de validação na última época                       | 89,2% (214 de 240) |
 | Acurácia de quem sempre responde Normal, na mesma validação | 72,5% (174 de 240) |
-| Recall de COVID-19 na validação do projeto | 0,41 (9 de 22) |
-| Recall de COVID-19 no teste real | 0,44 (133 de 300) |
-| Recall de Normal e de Pneumonia no teste real | 0,97 e 0,94 |
+| Recall de COVID-19 na validação do projeto                  | 0,41 (9 de 22)     |
+| Recall de COVID-19 no teste real                            | 0,44 (133 de 300)  |
+| Recall de Normal e de Pneumonia no teste real               | 0,97 e 0,94        |
 
 ![Projeto reproduzido: perda e acurácia por época](figures/a4_original_history.png)
 
@@ -134,12 +134,12 @@ A reprodução do projeto serve de evidência. Os números dela, todos da mesma 
 - Entraram só as radiografias das classes Normal, Pneumonia viral e COVID-19, em tons de cinza e reduzidas para 64x64. As máscaras de pulmão que acompanham a base nunca são lidas.
 - 15.153 arquivos de radiografia. 54 cópias exatas removidas pelo conteúdo do arquivo. Sobram 15.099 imagens distintas.
 
-| Classe | Base limpa | Conjunto do projeto | Treino | Validação | Teste real |
-| --- | --- | --- | --- | --- | --- |
-| Normal | 10.191 | 840 | 672 | 168 | 300 |
-| Pneumonia | 1.338 | 240 | 192 | 48 | 300 |
-| COVID-19 | 3.570 | 120 | 96 | 24 | 300 |
-| Total | 15.099 | 1.200 | 960 | 240 | 900 |
+| Classe    | Base limpa | Conjunto do projeto | Treino | Validação | Teste real |
+| --------- | ---------- | ------------------- | ------ | --------- | ---------- |
+| Normal    | 10.191     | 840                 | 672    | 168       | 300        |
+| Pneumonia | 1.338      | 240                 | 192    | 48        | 300        |
+| COVID-19  | 3.570      | 120                 | 96     | 24        | 300        |
+| Total     | 15.099     | 1.200               | 960    | 240       | 900        |
 
 ![Número de imagens por classe na base limpa, no conjunto do projeto e no teste real](figures/a4_class_counts.png)
 
@@ -227,11 +227,11 @@ Três foram testadas em execuções anteriores do notebook e saíram dele. Os n�
 
 **Razão de diversidade, três seeds (média ± desvio padrão amostral)**
 
-| Classe | Versão 1 | Seeds colapsadas | Versão 2 | Seeds colapsadas |
-| --- | --- | --- | --- | --- |
-| Normal | 0,956 ± 0,032 | 0 de 3 | 0,522 ± 0,086 | 1 de 3 |
-| Pneumonia | 0,890 ± 0,092 | 0 de 3 | 0,588 ± 0,094 | 1 de 3 |
-| COVID-19 | 0,439 ± 0,151 | 2 de 3 | 0,700 ± 0,043 | 0 de 3 |
+| Classe    | Versão 1      | Seeds colapsadas | Versão 2      | Seeds colapsadas |
+| --------- | ------------- | ---------------- | ------------- | ---------------- |
+| Normal    | 0,956 ± 0,032 | 0 de 3           | 0,522 ± 0,086 | 1 de 3           |
+| Pneumonia | 0,890 ± 0,092 | 0 de 3           | 0,588 ± 0,094 | 1 de 3           |
+| COVID-19  | 0,439 ± 0,151 | 2 de 3           | 0,700 ± 0,043 | 0 de 3           |
 
 - COVID-19 por seed: versão 1 com 0,412, 0,602 e 0,303. Versão 2 com 0,698, 0,744 e 0,658.
 
@@ -264,9 +264,9 @@ Três foram testadas em execuções anteriores do notebook e saíram dele. Os n�
 - Medida: para cada imagem gerada de COVID-19, a diferença média de pixels até a imagem real de COVID-19 mais próxima no treino. A régua é a mesma conta feita com as 24 imagens reais de COVID-19 da validação.
 
 | Distância até a imagem de treino mais próxima | Imagens | Média | Mediana | Mínimo |
-| --- | --- | --- | --- | --- |
-| Geradas pela versão 2 (três seeds) | 1.728 | 0,119 | 0,119 | 0,077 |
-| Reais de validação | 24 | 0,105 | 0,099 | 0,072 |
+| --------------------------------------------- | ------- | ----- | ------- | ------ |
+| Geradas pela versão 2 (três seeds)            | 1.728   | 0,119 | 0,119   | 0,077  |
+| Reais de validação                            | 24      | 0,105 | 0,099   | 0,072  |
 
 - Nenhuma imagem gerada ficou mais perto do treino que a imagem real de validação mais próxima. A parcela foi 0. Não há sinal de cópia.
 - As geradas ficam um pouco mais longe do treino que as reais de validação. Parte dessa distância é ruído.
@@ -296,10 +296,10 @@ Três foram testadas em execuções anteriores do notebook e saíram dele. Os n�
 
 **Recall no teste real (média ± desvio padrão amostral, três seeds)**
 
-| Braço | Normal | Pneumonia | COVID-19 | COVID-19 por seed |
-| --- | --- | --- | --- | --- |
-| 1. Só reais | 0,994 ± 0,005 | 0,873 ± 0,046 | 0,586 ± 0,138 | 0,713 / 0,440 / 0,603 |
-| 2. Reais e sintéticas | 0,992 ± 0,004 | 0,916 ± 0,033 | 0,571 ± 0,095 | 0,640 / 0,610 / 0,463 |
+| Braço                        | Normal        | Pneumonia     | COVID-19      | COVID-19 por seed     |
+| ---------------------------- | ------------- | ------------- | ------------- | --------------------- |
+| 1. Só reais                  | 0,994 ± 0,005 | 0,873 ± 0,046 | 0,586 ± 0,138 | 0,713 / 0,440 / 0,603 |
+| 2. Reais e sintéticas        | 0,992 ± 0,004 | 0,916 ± 0,033 | 0,571 ± 0,095 | 0,640 / 0,610 / 0,463 |
 | 3. Reais com pesos de classe | 0,977 ± 0,015 | 0,948 ± 0,027 | 0,787 ± 0,074 | 0,810 / 0,703 / 0,847 |
 
 **Nesta execução, o braço com pesos de classe fica acima dos outros dois por mais que o desvio padrão de cada um. Na execução anterior, com as mesmas configurações, o braço com pesos de classe também era o mais alto, mas a diferença ficava dentro do desvio. Os braços 1 e 2 não se distinguem.**
@@ -320,11 +320,11 @@ Três foram testadas em execuções anteriores do notebook e saíram dele. Os n�
 
 **Para onde vão os casos perdidos (900 imagens de COVID-19: 300 por seed)**
 
-| Braço | Acertos | Classificadas como Normal | Classificadas como Pneumonia |
-| --- | --- | --- | --- |
-| 1. Só reais | 527 | 356 | 17 |
-| 2. Reais e sintéticas | 514 | 376 | 10 |
-| 3. Reais com pesos de classe | 708 | 176 | 16 |
+| Braço                        | Acertos | Classificadas como Normal | Classificadas como Pneumonia |
+| ---------------------------- | ------- | ------------------------- | ---------------------------- |
+| 1. Só reais                  | 527     | 356                       | 17                           |
+| 2. Reais e sintéticas        | 514     | 376                       | 10                           |
+| 3. Reais com pesos de classe | 708     | 176                       | 16                           |
 
 - Quase todo caso perdido de COVID-19 vira Normal, nos três braços.
 - A precision de COVID-19 fica entre 0,98 e 0,99 nos três braços. Quando o modelo diz COVID-19, quase sempre acerta. Ele diz pouco.
@@ -338,16 +338,16 @@ Três foram testadas em execuções anteriores do notebook e saíram dele. Os n�
 
 ## Plano de melhoria integrado
 
-| Problema do diagnóstico | Ação |
-| --- | --- |
-| 1. Desbalanceamento | Pesos de classe na perda como primeira medida. Coletar mais casos reais de COVID-19, que é a correção de fato. |
-| 2. Divisão sem estratificação | Divisão estratificada. Validação cruzada com pelo menos 5 partes, para reportar média e intervalo. |
-| 3. Só acurácia | Métrica principal: recall de COVID-19 em uma specificity fixa. Reportar também precision, F1 e matriz de confusão por classe, com intervalo de confiança. |
-| 4. Sem pré-treinamento | ResNet-18 pré-treinada, com fine-tuning e taxa de aprendizado baixa. Comparar com pesos pré-treinados em radiografias, se houver. |
-| 5. Overfitting e otimização | Adam ou SGD com momentum, scheduler de taxa de aprendizado, weight decay, early stopping e escolha de checkpoint pela recall de validação. |
-| 6. Sem augmentation | Translação, rotação leve, brilho e contraste. Sem flip horizontal. |
-| 7. Sem teste | Teste separado desde o início, usado uma única vez, e o teste externo descrito abaixo. |
-| 8. Cópias e pacientes | Remover cópias exatas e quase-duplicatas. Dividir por identificador de paciente. |
+| Problema do diagnóstico       | Ação                                                                                                                                                      |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Desbalanceamento           | Pesos de classe na perda como primeira medida. Coletar mais casos reais de COVID-19, que é a correção de fato.                                            |
+| 2. Divisão sem estratificação | Divisão estratificada. Validação cruzada com pelo menos 5 partes, para reportar média e intervalo.                                                        |
+| 3. Só acurácia                | Métrica principal: recall de COVID-19 em uma specificity fixa. Reportar também precision, F1 e matriz de confusão por classe, com intervalo de confiança. |
+| 4. Sem pré-treinamento        | ResNet-18 pré-treinada, com fine-tuning e taxa de aprendizado baixa. Comparar com pesos pré-treinados em radiografias, se houver.                         |
+| 5. Overfitting e otimização   | Adam ou SGD com momentum, scheduler de taxa de aprendizado, weight decay, early stopping e escolha de checkpoint pela recall de validação.                |
+| 6. Sem augmentation           | Translação, rotação leve, brilho e contraste. Sem flip horizontal.                                                                                        |
+| 7. Sem teste                  | Teste separado desde o início, usado uma única vez, e o teste externo descrito abaixo.                                                                    |
+| 8. Cópias e pacientes         | Remover cópias exatas e quase-duplicatas. Dividir por identificador de paciente.                                                                          |
 
 **Modelo**
 

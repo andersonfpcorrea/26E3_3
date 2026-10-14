@@ -14,11 +14,11 @@
 - 47 cópias exatas foram removidas, comparando o conteúdo dos arquivos.
 - 1.149 miniaturas foram removidas pela regra abaixo.
 
-| Parte | Imagens | Parcela |
-| --- | --- | --- |
-| Anúncios | 301 | 20,1% |
-| Imagens de participantes | 1.200 | 79,9% |
-| Total | 1.501 | 100% |
+| Parte                    | Imagens | Parcela |
+| ------------------------ | ------- | ------- |
+| Anúncios                 | 301     | 20,1%   |
+| Imagens de participantes | 1.200   | 79,9%   |
+| Total                    | 1.501   | 100%    |
 
 **Miniaturas: a regra e o seu limite**
 
@@ -75,34 +75,34 @@
 
 Frequência com limiar 0,5. "Imagens" é a contagem no corpus inteiro. Empates são desfeitos pela similaridade média.
 
-| # | Conceito | Imagens | Corpus | Anúncios | Participantes |
-| --- | --- | --- | --- | --- | --- |
-| 1 | an online advertisement with a lot of text | 232 | 15,5% | 70,1% | 1,8% |
-| 2 | an animal | 120 | 8,0% | 0,0% | 10,0% |
-| 3 | food | 92 | 6,1% | 0,7% | 7,5% |
-| 4 | outdoor scenery | 73 | 4,9% | 0,0% | 6,1% |
-| 5 | text and a logo | 45 | 3,0% | 1,0% | 3,5% |
-| 6 | a child | 42 | 2,8% | 0,0% | 3,5% |
-| 7 | a product on a plain background | 39 | 2,6% | 7,0% | 1,5% |
-| 8 | a man | 38 | 2,5% | 0,0% | 3,2% |
-| 9 | sports | 37 | 2,5% | 0,7% | 2,9% |
-| 10 | an illustration or cartoon | 35 | 2,3% | 0,3% | 2,8% |
-| 11 | jewellery | 18 | 1,2% | 1,7% | 1,1% |
-| 12 | a car | 18 | 1,2% | 0,3% | 1,4% |
-| 13 | clothes | 17 | 1,1% | 0,0% | 1,4% |
-| 14 | a beach | 17 | 1,1% | 0,0% | 1,4% |
-| 15 | cosmetics | 16 | 1,1% | 0,7% | 1,2% |
-| 16 | a chart or diagram | 16 | 1,1% | 0,0% | 1,3% |
-| 17 | a person | 12 | 0,8% | 0,0% | 1,0% |
-| 18 | a mobile phone | 12 | 0,8% | 1,0% | 0,8% |
-| 19 | a smiling woman | 10 | 0,7% | 0,0% | 0,8% |
-| 20 | furniture | 9 | 0,6% | 1,0% | 0,5% |
-| 21 | a musical instrument | 9 | 0,6% | 1,3% | 0,4% |
-| 22 | a drink | 9 | 0,6% | 0,0% | 0,8% |
-| 23 | a house | 9 | 0,6% | 0,0% | 0,8% |
-| 24 | shoes | 7 | 0,5% | 0,3% | 0,5% |
-| 25 | a computer | 4 | 0,3% | 0,3% | 0,2% |
-| 26 | a city street | 4 | 0,3% | 0,0% | 0,3% |
+| #   | Conceito                                   | Imagens | Corpus | Anúncios | Participantes |
+| --- | ------------------------------------------ | ------- | ------ | -------- | ------------- |
+| 1   | an online advertisement with a lot of text | 232     | 15,5%  | 70,1%    | 1,8%          |
+| 2   | an animal                                  | 120     | 8,0%   | 0,0%     | 10,0%         |
+| 3   | food                                       | 92      | 6,1%   | 0,7%     | 7,5%          |
+| 4   | outdoor scenery                            | 73      | 4,9%   | 0,0%     | 6,1%          |
+| 5   | text and a logo                            | 45      | 3,0%   | 1,0%     | 3,5%          |
+| 6   | a child                                    | 42      | 2,8%   | 0,0%     | 3,5%          |
+| 7   | a product on a plain background            | 39      | 2,6%   | 7,0%     | 1,5%          |
+| 8   | a man                                      | 38      | 2,5%   | 0,0%     | 3,2%          |
+| 9   | sports                                     | 37      | 2,5%   | 0,7%     | 2,9%          |
+| 10  | an illustration or cartoon                 | 35      | 2,3%   | 0,3%     | 2,8%          |
+| 11  | jewellery                                  | 18      | 1,2%   | 1,7%     | 1,1%          |
+| 12  | a car                                      | 18      | 1,2%   | 0,3%     | 1,4%          |
+| 13  | clothes                                    | 17      | 1,1%   | 0,0%     | 1,4%          |
+| 14  | a beach                                    | 17      | 1,1%   | 0,0%     | 1,4%          |
+| 15  | cosmetics                                  | 16      | 1,1%   | 0,7%     | 1,2%          |
+| 16  | a chart or diagram                         | 16      | 1,1%   | 0,0%     | 1,3%          |
+| 17  | a person                                   | 12      | 0,8%   | 0,0%     | 1,0%          |
+| 18  | a mobile phone                             | 12      | 0,8%   | 1,0%     | 0,8%          |
+| 19  | a smiling woman                            | 10      | 0,7%   | 0,0%     | 0,8%          |
+| 20  | furniture                                  | 9       | 0,6%   | 1,0%     | 0,5%          |
+| 21  | a musical instrument                       | 9       | 0,6%   | 1,3%     | 0,4%          |
+| 22  | a drink                                    | 9       | 0,6%   | 0,0%     | 0,8%          |
+| 23  | a house                                    | 9       | 0,6%   | 0,0%     | 0,8%          |
+| 24  | shoes                                      | 7       | 0,5%   | 0,3%     | 0,5%          |
+| 25  | a computer                                 | 4       | 0,3%   | 0,3%     | 0,2%          |
+| 26  | a city street                              | 4       | 0,3%   | 0,0%     | 0,3%          |
 
 ![Os 15 conceitos mais frequentes no corpus, nos anúncios e nas imagens de participantes](figures/a2_ranking.png)
 
@@ -266,11 +266,11 @@ Três frases passaram pelo tokenizer do CLIP e pelo do `bert-base-uncased`, com 
 - BERT, tokens: `[CLS]`, `a`, `car`, `[SEP]` e mais 23 vezes `[PAD]`.
 - Attention mask, igual nos dois: 1, 1, 1, 1 e depois 23 zeros.
 
-| Frase | Tokens reais | Padding |
-| --- | --- | --- |
-| "a car" | 4 | 23 |
-| "a red sports car on a road" | 9 | 18 |
-| Frase longa sobre uma família no café da manhã | 27 | 0 |
+| Frase                                          | Tokens reais | Padding |
+| ---------------------------------------------- | ------------ | ------- |
+| "a car"                                        | 4            | 23      |
+| "a red sports car on a road"                   | 9            | 18      |
+| Frase longa sobre uma família no café da manhã | 27           | 0       |
 
 - Os números da tabela são os mesmos nos dois tokenizers. Nestas frases, cada palavra virou um único token, e a vírgula da terceira frase também.
 - Os dois passam o texto para minúsculas, cortam palavras raras em unidades menores e trocam cada unidade por um id do vocabulário. O CLIP usa byte-pair encoding e marca o fim de cada palavra com `</w>`. O BERT usa WordPiece.
